@@ -17,7 +17,7 @@ export class TransactionsController {
   @ApiOperation({ summary: 'Create a transaction (expense/income)' })
   create(
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('sub') userId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: CreateTransactionDto,
   ) {
     return this.service.create(tenantId, userId, dto);
@@ -38,6 +38,6 @@ export class TransactionsController {
   @Get(':id')
   @ApiOperation({ summary: 'Get transaction by ID' })
   findOne(@CurrentUser('tenantId') tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(tenantId, id);
+    return this.service.findOne(id, tenantId);
   }
 }
