@@ -90,7 +90,7 @@ export class SalesService {
     });
   }
 
-  async findOne(id: string, tenantId: string) {
+  async findOne(tenantId: string, id: string) {
     const sale = await this.prisma.sale.findFirst({
       where: { id, tenantId },
       include: {

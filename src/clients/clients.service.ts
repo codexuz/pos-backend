@@ -27,7 +27,7 @@ export class ClientsService {
     });
   }
 
-  async findOne(id: string, tenantId: string) {
+  async findOne(tenantId: string, id: string) {
     const client = await this.prisma.client.findFirst({
       where: { id, tenantId },
       include: {
@@ -38,16 +38,16 @@ export class ClientsService {
     return client;
   }
 
-  async update(id: string, tenantId: string, dto: UpdateClientDto) {
-    await this.findOne(id, tenantId);
+  async update(tenantId: string, id: string, dto: UpdateClientDto) {
+    await this.findOne(tenantId, id);
     return this.prisma.client.update({
       where: { id },
       data: dto,
     });
   }
 
-  async remove(id: string, tenantId: string) {
-    await this.findOne(id, tenantId);
+  async remove(tenantId: string, id: string) {
+    await this.findOne(tenantId, id);
     return this.prisma.client.delete({ where: { id } });
   }
 }
