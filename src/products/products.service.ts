@@ -37,7 +37,7 @@ export class ProductsService {
       include: {
         category: true,
         unit: true,
-        inventory: { include: { branch: { select: { id: true, name: true } } } },
+        inventory: true,
       },
     });
     if (!product) throw new NotFoundException('Product not found');
