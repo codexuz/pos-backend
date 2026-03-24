@@ -106,6 +106,7 @@ model Tenant {
   payments          Payment[]
   expenseCategories ExpenseCategory[]
   transactions      Transaction[]
+  inventory         Inventory[]
 
   @@map("tenants")
 }
@@ -122,7 +123,6 @@ model Branch {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  inventory    Inventory[]
   sales        Sale[]
   transactions Transaction[]
   users        User[]
@@ -216,15 +216,15 @@ model Product {
 model Inventory {
   id          String   @id @default(uuid()) @db.Uuid
   productId   String   @map("product_id") @db.Uuid
-  branchId    String   @map("branch_id") @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
   quantity    Decimal  @default(0) @db.Decimal(12, 2)
   minQuantity Decimal? @default(0) @map("min_quantity") @db.Decimal(12, 2)
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([productId, branchId], map: "inventory_product_branch_idx")
+  @@unique([productId, tenantId], map: "inventory_product_tenant_idx")
   @@map("inventory")
 }
 

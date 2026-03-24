@@ -1601,7 +1601,7 @@ export type ProductScalarFieldEnum = (typeof ProductScalarFieldEnum)[keyof typeo
 export const InventoryScalarFieldEnum = {
   id: 'id',
   productId: 'productId',
-  branchId: 'branchId',
+  tenantId: 'tenantId',
   quantity: 'quantity',
   minQuantity: 'minQuantity',
   updatedAt: 'updatedAt'

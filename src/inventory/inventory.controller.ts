@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
 import { CreateInventoryDto, UpdateInventoryDto } from './dto';
 import { CurrentUser } from '../auth/decorators';
@@ -12,22 +12,20 @@ export class InventoryController {
 
   @Post()
   @ApiOperation({ summary: 'Create an inventory record' })
-  create(@Body() dto: CreateInventoryDto) {
-    return this.service.create(dto);
+  create(@CurrentUser('tenantId') tenantId: string, @Body() dto: CreateInventoryDto) {
+    return this.service.create(tenantId, dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'List inventory for a branch' })
-  @ApiQuery({ name: 'branchId', required: true })
-  findAll(@Query('branchId', ParseUUIDPipe) branchId: string) {
-    return this.service.findAll(branchId);
+  @ApiOperation({ summary: 'List inventory for a tenant' })
+  findAll(@CurrentUser('tenantId') tenantId: string) {
+    return this.service.findAll(tenantId);
   }
 
   @Get('low-stock')
-  @ApiOperation({ summary: 'Get low stock items for a branch' })
-  @ApiQuery({ name: 'branchId', required: true })
-  findLowStock(@Query('branchId', ParseUUIDPipe) branchId: string) {
-    return this.service.findLowStock(branchId);
+  @ApiOperation({ summary: 'Get low stock items for a tenant' })
+  findLowStock(@CurrentUser('tenantId') tenantId: string) {
+    return this.service.findLowStock(tenantId);
   }
 
   @Get(':id')

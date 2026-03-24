@@ -6,19 +6,19 @@ import { CreateInventoryDto, UpdateInventoryDto } from './dto';
 export class InventoryService {
   constructor(private prisma: PrismaService) {}
 
-  create(dto: CreateInventoryDto) {
+  create(tenantId: string, dto: CreateInventoryDto) {
     return this.prisma.inventory.create({
-      data: dto as any,
+      data: { ...dto, tenantId } as any,
       include: {
         product: { select: { id: true, name: true, sku: true } },
-        branch: { select: { id: true, name: true } },
+        tenant: { select: { id: true, name: true } },
       },
     });
   }
 
-  findAll(branchId: string) {
+  findAll(tenantId: string) {
     return this.prisma.inventory.findMany({
-      where: { branchId },
+      where: { tenantId },
       include: {
         product: {
           select: { id: true, name: true, sku: true, barcode: true, sellingPrice: true, unit: true },
@@ -28,12 +28,12 @@ export class InventoryService {
     });
   }
 
-  findLowStock(branchId: string) {
+  findLowStock(tenantId: string) {
     return this.prisma.$queryRaw`
       SELECT i.*, p.name as product_name, p.sku
       FROM inventory i
       JOIN products p ON p.id = i.product_id
-      WHERE i.branch_id = ${branchId}::uuid
+      WHERE i.tenant_id = ${tenantId}::uuid
         AND i.quantity <= i.min_quantity
       ORDER BY i.quantity ASC
     `;
@@ -44,7 +44,7 @@ export class InventoryService {
       where: { id },
       include: {
         product: { select: { id: true, name: true, sku: true } },
-        branch: { select: { id: true, name: true } },
+        tenant: { select: { id: true, name: true } },
       },
     });
     if (!inventory) throw new NotFoundException('Inventory record not found');
@@ -58,7 +58,7 @@ export class InventoryService {
       data: dto as any,
       include: {
         product: { select: { id: true, name: true, sku: true } },
-        branch: { select: { id: true, name: true } },
+        tenant: { select: { id: true, name: true } },
       },
     });
   }

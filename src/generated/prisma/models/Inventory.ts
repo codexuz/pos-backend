@@ -39,7 +39,7 @@ export type InventorySumAggregateOutputType = {
 export type InventoryMinAggregateOutputType = {
   id: string | null
   productId: string | null
-  branchId: string | null
+  tenantId: string | null
   quantity: runtime.Decimal | null
   minQuantity: runtime.Decimal | null
   updatedAt: Date | null
@@ -48,7 +48,7 @@ export type InventoryMinAggregateOutputType = {
 export type InventoryMaxAggregateOutputType = {
   id: string | null
   productId: string | null
-  branchId: string | null
+  tenantId: string | null
   quantity: runtime.Decimal | null
   minQuantity: runtime.Decimal | null
   updatedAt: Date | null
@@ -57,7 +57,7 @@ export type InventoryMaxAggregateOutputType = {
 export type InventoryCountAggregateOutputType = {
   id: number
   productId: number
-  branchId: number
+  tenantId: number
   quantity: number
   minQuantity: number
   updatedAt: number
@@ -78,7 +78,7 @@ export type InventorySumAggregateInputType = {
 export type InventoryMinAggregateInputType = {
   id?: true
   productId?: true
-  branchId?: true
+  tenantId?: true
   quantity?: true
   minQuantity?: true
   updatedAt?: true
@@ -87,7 +87,7 @@ export type InventoryMinAggregateInputType = {
 export type InventoryMaxAggregateInputType = {
   id?: true
   productId?: true
-  branchId?: true
+  tenantId?: true
   quantity?: true
   minQuantity?: true
   updatedAt?: true
@@ -96,7 +96,7 @@ export type InventoryMaxAggregateInputType = {
 export type InventoryCountAggregateInputType = {
   id?: true
   productId?: true
-  branchId?: true
+  tenantId?: true
   quantity?: true
   minQuantity?: true
   updatedAt?: true
@@ -192,7 +192,7 @@ export type InventoryGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
 export type InventoryGroupByOutputType = {
   id: string
   productId: string
-  branchId: string
+  tenantId: string
   quantity: runtime.Decimal
   minQuantity: runtime.Decimal | null
   updatedAt: Date
@@ -224,44 +224,44 @@ export type InventoryWhereInput = {
   NOT?: Prisma.InventoryWhereInput | Prisma.InventoryWhereInput[]
   id?: Prisma.UuidFilter<"Inventory"> | string
   productId?: Prisma.UuidFilter<"Inventory"> | string
-  branchId?: Prisma.UuidFilter<"Inventory"> | string
+  tenantId?: Prisma.UuidFilter<"Inventory"> | string
   quantity?: Prisma.DecimalFilter<"Inventory"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.DecimalNullableFilter<"Inventory"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeFilter<"Inventory"> | Date | string
   product?: Prisma.XOR<Prisma.ProductScalarRelationFilter, Prisma.ProductWhereInput>
-  branch?: Prisma.XOR<Prisma.BranchScalarRelationFilter, Prisma.BranchWhereInput>
+  tenant?: Prisma.XOR<Prisma.TenantScalarRelationFilter, Prisma.TenantWhereInput>
 }
 
 export type InventoryOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   productId?: Prisma.SortOrder
-  branchId?: Prisma.SortOrder
+  tenantId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   minQuantity?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   product?: Prisma.ProductOrderByWithRelationInput
-  branch?: Prisma.BranchOrderByWithRelationInput
+  tenant?: Prisma.TenantOrderByWithRelationInput
 }
 
 export type InventoryWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  productId_branchId?: Prisma.InventoryProductIdBranchIdCompoundUniqueInput
+  productId_tenantId?: Prisma.InventoryProductIdTenantIdCompoundUniqueInput
   AND?: Prisma.InventoryWhereInput | Prisma.InventoryWhereInput[]
   OR?: Prisma.InventoryWhereInput[]
   NOT?: Prisma.InventoryWhereInput | Prisma.InventoryWhereInput[]
   productId?: Prisma.UuidFilter<"Inventory"> | string
-  branchId?: Prisma.UuidFilter<"Inventory"> | string
+  tenantId?: Prisma.UuidFilter<"Inventory"> | string
   quantity?: Prisma.DecimalFilter<"Inventory"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.DecimalNullableFilter<"Inventory"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeFilter<"Inventory"> | Date | string
   product?: Prisma.XOR<Prisma.ProductScalarRelationFilter, Prisma.ProductWhereInput>
-  branch?: Prisma.XOR<Prisma.BranchScalarRelationFilter, Prisma.BranchWhereInput>
-}, "id" | "productId_branchId">
+  tenant?: Prisma.XOR<Prisma.TenantScalarRelationFilter, Prisma.TenantWhereInput>
+}, "id" | "productId_tenantId">
 
 export type InventoryOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   productId?: Prisma.SortOrder
-  branchId?: Prisma.SortOrder
+  tenantId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   minQuantity?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -278,7 +278,7 @@ export type InventoryScalarWhereWithAggregatesInput = {
   NOT?: Prisma.InventoryScalarWhereWithAggregatesInput | Prisma.InventoryScalarWhereWithAggregatesInput[]
   id?: Prisma.UuidWithAggregatesFilter<"Inventory"> | string
   productId?: Prisma.UuidWithAggregatesFilter<"Inventory"> | string
-  branchId?: Prisma.UuidWithAggregatesFilter<"Inventory"> | string
+  tenantId?: Prisma.UuidWithAggregatesFilter<"Inventory"> | string
   quantity?: Prisma.DecimalWithAggregatesFilter<"Inventory"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.DecimalNullableWithAggregatesFilter<"Inventory"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Inventory"> | Date | string
@@ -290,13 +290,13 @@ export type InventoryCreateInput = {
   minQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Date | string
   product: Prisma.ProductCreateNestedOneWithoutInventoryInput
-  branch: Prisma.BranchCreateNestedOneWithoutInventoryInput
+  tenant: Prisma.TenantCreateNestedOneWithoutInventoryInput
 }
 
 export type InventoryUncheckedCreateInput = {
   id?: string
   productId: string
-  branchId: string
+  tenantId: string
   quantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Date | string
@@ -308,13 +308,13 @@ export type InventoryUpdateInput = {
   minQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   product?: Prisma.ProductUpdateOneRequiredWithoutInventoryNestedInput
-  branch?: Prisma.BranchUpdateOneRequiredWithoutInventoryNestedInput
+  tenant?: Prisma.TenantUpdateOneRequiredWithoutInventoryNestedInput
 }
 
 export type InventoryUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   productId?: Prisma.StringFieldUpdateOperationsInput | string
-  branchId?: Prisma.StringFieldUpdateOperationsInput | string
+  tenantId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -323,7 +323,7 @@ export type InventoryUncheckedUpdateInput = {
 export type InventoryCreateManyInput = {
   id?: string
   productId: string
-  branchId: string
+  tenantId: string
   quantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Date | string
@@ -339,7 +339,7 @@ export type InventoryUpdateManyMutationInput = {
 export type InventoryUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   productId?: Prisma.StringFieldUpdateOperationsInput | string
-  branchId?: Prisma.StringFieldUpdateOperationsInput | string
+  tenantId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -355,15 +355,15 @@ export type InventoryOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
-export type InventoryProductIdBranchIdCompoundUniqueInput = {
+export type InventoryProductIdTenantIdCompoundUniqueInput = {
   productId: string
-  branchId: string
+  tenantId: string
 }
 
 export type InventoryCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   productId?: Prisma.SortOrder
-  branchId?: Prisma.SortOrder
+  tenantId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   minQuantity?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -377,7 +377,7 @@ export type InventoryAvgOrderByAggregateInput = {
 export type InventoryMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   productId?: Prisma.SortOrder
-  branchId?: Prisma.SortOrder
+  tenantId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   minQuantity?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -386,7 +386,7 @@ export type InventoryMaxOrderByAggregateInput = {
 export type InventoryMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   productId?: Prisma.SortOrder
-  branchId?: Prisma.SortOrder
+  tenantId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   minQuantity?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -397,45 +397,45 @@ export type InventorySumOrderByAggregateInput = {
   minQuantity?: Prisma.SortOrder
 }
 
-export type InventoryCreateNestedManyWithoutBranchInput = {
-  create?: Prisma.XOR<Prisma.InventoryCreateWithoutBranchInput, Prisma.InventoryUncheckedCreateWithoutBranchInput> | Prisma.InventoryCreateWithoutBranchInput[] | Prisma.InventoryUncheckedCreateWithoutBranchInput[]
-  connectOrCreate?: Prisma.InventoryCreateOrConnectWithoutBranchInput | Prisma.InventoryCreateOrConnectWithoutBranchInput[]
-  createMany?: Prisma.InventoryCreateManyBranchInputEnvelope
+export type InventoryCreateNestedManyWithoutTenantInput = {
+  create?: Prisma.XOR<Prisma.InventoryCreateWithoutTenantInput, Prisma.InventoryUncheckedCreateWithoutTenantInput> | Prisma.InventoryCreateWithoutTenantInput[] | Prisma.InventoryUncheckedCreateWithoutTenantInput[]
+  connectOrCreate?: Prisma.InventoryCreateOrConnectWithoutTenantInput | Prisma.InventoryCreateOrConnectWithoutTenantInput[]
+  createMany?: Prisma.InventoryCreateManyTenantInputEnvelope
   connect?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
 }
 
-export type InventoryUncheckedCreateNestedManyWithoutBranchInput = {
-  create?: Prisma.XOR<Prisma.InventoryCreateWithoutBranchInput, Prisma.InventoryUncheckedCreateWithoutBranchInput> | Prisma.InventoryCreateWithoutBranchInput[] | Prisma.InventoryUncheckedCreateWithoutBranchInput[]
-  connectOrCreate?: Prisma.InventoryCreateOrConnectWithoutBranchInput | Prisma.InventoryCreateOrConnectWithoutBranchInput[]
-  createMany?: Prisma.InventoryCreateManyBranchInputEnvelope
+export type InventoryUncheckedCreateNestedManyWithoutTenantInput = {
+  create?: Prisma.XOR<Prisma.InventoryCreateWithoutTenantInput, Prisma.InventoryUncheckedCreateWithoutTenantInput> | Prisma.InventoryCreateWithoutTenantInput[] | Prisma.InventoryUncheckedCreateWithoutTenantInput[]
+  connectOrCreate?: Prisma.InventoryCreateOrConnectWithoutTenantInput | Prisma.InventoryCreateOrConnectWithoutTenantInput[]
+  createMany?: Prisma.InventoryCreateManyTenantInputEnvelope
   connect?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
 }
 
-export type InventoryUpdateManyWithoutBranchNestedInput = {
-  create?: Prisma.XOR<Prisma.InventoryCreateWithoutBranchInput, Prisma.InventoryUncheckedCreateWithoutBranchInput> | Prisma.InventoryCreateWithoutBranchInput[] | Prisma.InventoryUncheckedCreateWithoutBranchInput[]
-  connectOrCreate?: Prisma.InventoryCreateOrConnectWithoutBranchInput | Prisma.InventoryCreateOrConnectWithoutBranchInput[]
-  upsert?: Prisma.InventoryUpsertWithWhereUniqueWithoutBranchInput | Prisma.InventoryUpsertWithWhereUniqueWithoutBranchInput[]
-  createMany?: Prisma.InventoryCreateManyBranchInputEnvelope
+export type InventoryUpdateManyWithoutTenantNestedInput = {
+  create?: Prisma.XOR<Prisma.InventoryCreateWithoutTenantInput, Prisma.InventoryUncheckedCreateWithoutTenantInput> | Prisma.InventoryCreateWithoutTenantInput[] | Prisma.InventoryUncheckedCreateWithoutTenantInput[]
+  connectOrCreate?: Prisma.InventoryCreateOrConnectWithoutTenantInput | Prisma.InventoryCreateOrConnectWithoutTenantInput[]
+  upsert?: Prisma.InventoryUpsertWithWhereUniqueWithoutTenantInput | Prisma.InventoryUpsertWithWhereUniqueWithoutTenantInput[]
+  createMany?: Prisma.InventoryCreateManyTenantInputEnvelope
   set?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
   disconnect?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
   delete?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
   connect?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
-  update?: Prisma.InventoryUpdateWithWhereUniqueWithoutBranchInput | Prisma.InventoryUpdateWithWhereUniqueWithoutBranchInput[]
-  updateMany?: Prisma.InventoryUpdateManyWithWhereWithoutBranchInput | Prisma.InventoryUpdateManyWithWhereWithoutBranchInput[]
+  update?: Prisma.InventoryUpdateWithWhereUniqueWithoutTenantInput | Prisma.InventoryUpdateWithWhereUniqueWithoutTenantInput[]
+  updateMany?: Prisma.InventoryUpdateManyWithWhereWithoutTenantInput | Prisma.InventoryUpdateManyWithWhereWithoutTenantInput[]
   deleteMany?: Prisma.InventoryScalarWhereInput | Prisma.InventoryScalarWhereInput[]
 }
 
-export type InventoryUncheckedUpdateManyWithoutBranchNestedInput = {
-  create?: Prisma.XOR<Prisma.InventoryCreateWithoutBranchInput, Prisma.InventoryUncheckedCreateWithoutBranchInput> | Prisma.InventoryCreateWithoutBranchInput[] | Prisma.InventoryUncheckedCreateWithoutBranchInput[]
-  connectOrCreate?: Prisma.InventoryCreateOrConnectWithoutBranchInput | Prisma.InventoryCreateOrConnectWithoutBranchInput[]
-  upsert?: Prisma.InventoryUpsertWithWhereUniqueWithoutBranchInput | Prisma.InventoryUpsertWithWhereUniqueWithoutBranchInput[]
-  createMany?: Prisma.InventoryCreateManyBranchInputEnvelope
+export type InventoryUncheckedUpdateManyWithoutTenantNestedInput = {
+  create?: Prisma.XOR<Prisma.InventoryCreateWithoutTenantInput, Prisma.InventoryUncheckedCreateWithoutTenantInput> | Prisma.InventoryCreateWithoutTenantInput[] | Prisma.InventoryUncheckedCreateWithoutTenantInput[]
+  connectOrCreate?: Prisma.InventoryCreateOrConnectWithoutTenantInput | Prisma.InventoryCreateOrConnectWithoutTenantInput[]
+  upsert?: Prisma.InventoryUpsertWithWhereUniqueWithoutTenantInput | Prisma.InventoryUpsertWithWhereUniqueWithoutTenantInput[]
+  createMany?: Prisma.InventoryCreateManyTenantInputEnvelope
   set?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
   disconnect?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
   delete?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
   connect?: Prisma.InventoryWhereUniqueInput | Prisma.InventoryWhereUniqueInput[]
-  update?: Prisma.InventoryUpdateWithWhereUniqueWithoutBranchInput | Prisma.InventoryUpdateWithWhereUniqueWithoutBranchInput[]
-  updateMany?: Prisma.InventoryUpdateManyWithWhereWithoutBranchInput | Prisma.InventoryUpdateManyWithWhereWithoutBranchInput[]
+  update?: Prisma.InventoryUpdateWithWhereUniqueWithoutTenantInput | Prisma.InventoryUpdateWithWhereUniqueWithoutTenantInput[]
+  updateMany?: Prisma.InventoryUpdateManyWithWhereWithoutTenantInput | Prisma.InventoryUpdateManyWithWhereWithoutTenantInput[]
   deleteMany?: Prisma.InventoryScalarWhereInput | Prisma.InventoryScalarWhereInput[]
 }
 
@@ -489,7 +489,7 @@ export type NullableDecimalFieldUpdateOperationsInput = {
   divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
-export type InventoryCreateWithoutBranchInput = {
+export type InventoryCreateWithoutTenantInput = {
   id?: string
   quantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -497,7 +497,7 @@ export type InventoryCreateWithoutBranchInput = {
   product: Prisma.ProductCreateNestedOneWithoutInventoryInput
 }
 
-export type InventoryUncheckedCreateWithoutBranchInput = {
+export type InventoryUncheckedCreateWithoutTenantInput = {
   id?: string
   productId: string
   quantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -505,30 +505,30 @@ export type InventoryUncheckedCreateWithoutBranchInput = {
   updatedAt?: Date | string
 }
 
-export type InventoryCreateOrConnectWithoutBranchInput = {
+export type InventoryCreateOrConnectWithoutTenantInput = {
   where: Prisma.InventoryWhereUniqueInput
-  create: Prisma.XOR<Prisma.InventoryCreateWithoutBranchInput, Prisma.InventoryUncheckedCreateWithoutBranchInput>
+  create: Prisma.XOR<Prisma.InventoryCreateWithoutTenantInput, Prisma.InventoryUncheckedCreateWithoutTenantInput>
 }
 
-export type InventoryCreateManyBranchInputEnvelope = {
-  data: Prisma.InventoryCreateManyBranchInput | Prisma.InventoryCreateManyBranchInput[]
+export type InventoryCreateManyTenantInputEnvelope = {
+  data: Prisma.InventoryCreateManyTenantInput | Prisma.InventoryCreateManyTenantInput[]
   skipDuplicates?: boolean
 }
 
-export type InventoryUpsertWithWhereUniqueWithoutBranchInput = {
+export type InventoryUpsertWithWhereUniqueWithoutTenantInput = {
   where: Prisma.InventoryWhereUniqueInput
-  update: Prisma.XOR<Prisma.InventoryUpdateWithoutBranchInput, Prisma.InventoryUncheckedUpdateWithoutBranchInput>
-  create: Prisma.XOR<Prisma.InventoryCreateWithoutBranchInput, Prisma.InventoryUncheckedCreateWithoutBranchInput>
+  update: Prisma.XOR<Prisma.InventoryUpdateWithoutTenantInput, Prisma.InventoryUncheckedUpdateWithoutTenantInput>
+  create: Prisma.XOR<Prisma.InventoryCreateWithoutTenantInput, Prisma.InventoryUncheckedCreateWithoutTenantInput>
 }
 
-export type InventoryUpdateWithWhereUniqueWithoutBranchInput = {
+export type InventoryUpdateWithWhereUniqueWithoutTenantInput = {
   where: Prisma.InventoryWhereUniqueInput
-  data: Prisma.XOR<Prisma.InventoryUpdateWithoutBranchInput, Prisma.InventoryUncheckedUpdateWithoutBranchInput>
+  data: Prisma.XOR<Prisma.InventoryUpdateWithoutTenantInput, Prisma.InventoryUncheckedUpdateWithoutTenantInput>
 }
 
-export type InventoryUpdateManyWithWhereWithoutBranchInput = {
+export type InventoryUpdateManyWithWhereWithoutTenantInput = {
   where: Prisma.InventoryScalarWhereInput
-  data: Prisma.XOR<Prisma.InventoryUpdateManyMutationInput, Prisma.InventoryUncheckedUpdateManyWithoutBranchInput>
+  data: Prisma.XOR<Prisma.InventoryUpdateManyMutationInput, Prisma.InventoryUncheckedUpdateManyWithoutTenantInput>
 }
 
 export type InventoryScalarWhereInput = {
@@ -537,7 +537,7 @@ export type InventoryScalarWhereInput = {
   NOT?: Prisma.InventoryScalarWhereInput | Prisma.InventoryScalarWhereInput[]
   id?: Prisma.UuidFilter<"Inventory"> | string
   productId?: Prisma.UuidFilter<"Inventory"> | string
-  branchId?: Prisma.UuidFilter<"Inventory"> | string
+  tenantId?: Prisma.UuidFilter<"Inventory"> | string
   quantity?: Prisma.DecimalFilter<"Inventory"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.DecimalNullableFilter<"Inventory"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeFilter<"Inventory"> | Date | string
@@ -548,12 +548,12 @@ export type InventoryCreateWithoutProductInput = {
   quantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Date | string
-  branch: Prisma.BranchCreateNestedOneWithoutInventoryInput
+  tenant: Prisma.TenantCreateNestedOneWithoutInventoryInput
 }
 
 export type InventoryUncheckedCreateWithoutProductInput = {
   id?: string
-  branchId: string
+  tenantId: string
   quantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Date | string
@@ -585,7 +585,7 @@ export type InventoryUpdateManyWithWhereWithoutProductInput = {
   data: Prisma.XOR<Prisma.InventoryUpdateManyMutationInput, Prisma.InventoryUncheckedUpdateManyWithoutProductInput>
 }
 
-export type InventoryCreateManyBranchInput = {
+export type InventoryCreateManyTenantInput = {
   id?: string
   productId: string
   quantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -593,7 +593,7 @@ export type InventoryCreateManyBranchInput = {
   updatedAt?: Date | string
 }
 
-export type InventoryUpdateWithoutBranchInput = {
+export type InventoryUpdateWithoutTenantInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -601,7 +601,7 @@ export type InventoryUpdateWithoutBranchInput = {
   product?: Prisma.ProductUpdateOneRequiredWithoutInventoryNestedInput
 }
 
-export type InventoryUncheckedUpdateWithoutBranchInput = {
+export type InventoryUncheckedUpdateWithoutTenantInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   productId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -609,7 +609,7 @@ export type InventoryUncheckedUpdateWithoutBranchInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type InventoryUncheckedUpdateManyWithoutBranchInput = {
+export type InventoryUncheckedUpdateManyWithoutTenantInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   productId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -619,7 +619,7 @@ export type InventoryUncheckedUpdateManyWithoutBranchInput = {
 
 export type InventoryCreateManyProductInput = {
   id?: string
-  branchId: string
+  tenantId: string
   quantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Date | string
@@ -630,12 +630,12 @@ export type InventoryUpdateWithoutProductInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  branch?: Prisma.BranchUpdateOneRequiredWithoutInventoryNestedInput
+  tenant?: Prisma.TenantUpdateOneRequiredWithoutInventoryNestedInput
 }
 
 export type InventoryUncheckedUpdateWithoutProductInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  branchId?: Prisma.StringFieldUpdateOperationsInput | string
+  tenantId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -643,7 +643,7 @@ export type InventoryUncheckedUpdateWithoutProductInput = {
 
 export type InventoryUncheckedUpdateManyWithoutProductInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  branchId?: Prisma.StringFieldUpdateOperationsInput | string
+  tenantId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   minQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -654,69 +654,69 @@ export type InventoryUncheckedUpdateManyWithoutProductInput = {
 export type InventorySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   productId?: boolean
-  branchId?: boolean
+  tenantId?: boolean
   quantity?: boolean
   minQuantity?: boolean
   updatedAt?: boolean
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
-  branch?: boolean | Prisma.BranchDefaultArgs<ExtArgs>
+  tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["inventory"]>
 
 export type InventorySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   productId?: boolean
-  branchId?: boolean
+  tenantId?: boolean
   quantity?: boolean
   minQuantity?: boolean
   updatedAt?: boolean
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
-  branch?: boolean | Prisma.BranchDefaultArgs<ExtArgs>
+  tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["inventory"]>
 
 export type InventorySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   productId?: boolean
-  branchId?: boolean
+  tenantId?: boolean
   quantity?: boolean
   minQuantity?: boolean
   updatedAt?: boolean
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
-  branch?: boolean | Prisma.BranchDefaultArgs<ExtArgs>
+  tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["inventory"]>
 
 export type InventorySelectScalar = {
   id?: boolean
   productId?: boolean
-  branchId?: boolean
+  tenantId?: boolean
   quantity?: boolean
   minQuantity?: boolean
   updatedAt?: boolean
 }
 
-export type InventoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "productId" | "branchId" | "quantity" | "minQuantity" | "updatedAt", ExtArgs["result"]["inventory"]>
+export type InventoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "productId" | "tenantId" | "quantity" | "minQuantity" | "updatedAt", ExtArgs["result"]["inventory"]>
 export type InventoryInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
-  branch?: boolean | Prisma.BranchDefaultArgs<ExtArgs>
+  tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
 }
 export type InventoryIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
-  branch?: boolean | Prisma.BranchDefaultArgs<ExtArgs>
+  tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
 }
 export type InventoryIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
-  branch?: boolean | Prisma.BranchDefaultArgs<ExtArgs>
+  tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
 }
 
 export type $InventoryPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Inventory"
   objects: {
     product: Prisma.$ProductPayload<ExtArgs>
-    branch: Prisma.$BranchPayload<ExtArgs>
+    tenant: Prisma.$TenantPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     productId: string
-    branchId: string
+    tenantId: string
     quantity: runtime.Decimal
     minQuantity: runtime.Decimal | null
     updatedAt: Date
@@ -1115,7 +1115,7 @@ readonly fields: InventoryFieldRefs;
 export interface Prisma__InventoryClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   product<T extends Prisma.ProductDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductDefaultArgs<ExtArgs>>): Prisma.Prisma__ProductClient<runtime.Types.Result.GetResult<Prisma.$ProductPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  branch<T extends Prisma.BranchDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BranchDefaultArgs<ExtArgs>>): Prisma.Prisma__BranchClient<runtime.Types.Result.GetResult<Prisma.$BranchPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  tenant<T extends Prisma.TenantDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TenantDefaultArgs<ExtArgs>>): Prisma.Prisma__TenantClient<runtime.Types.Result.GetResult<Prisma.$TenantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1147,7 +1147,7 @@ export interface Prisma__InventoryClient<T, Null = never, ExtArgs extends runtim
 export interface InventoryFieldRefs {
   readonly id: Prisma.FieldRef<"Inventory", 'String'>
   readonly productId: Prisma.FieldRef<"Inventory", 'String'>
-  readonly branchId: Prisma.FieldRef<"Inventory", 'String'>
+  readonly tenantId: Prisma.FieldRef<"Inventory", 'String'>
   readonly quantity: Prisma.FieldRef<"Inventory", 'Decimal'>
   readonly minQuantity: Prisma.FieldRef<"Inventory", 'Decimal'>
   readonly updatedAt: Prisma.FieldRef<"Inventory", 'DateTime'>

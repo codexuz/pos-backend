@@ -8,11 +8,6 @@ export class CreateInventoryDto {
   @IsNotEmpty()
   productId: string;
 
-  @ApiProperty()
-  @IsUUID()
-  @IsNotEmpty()
-  branchId: string;
-
   @ApiPropertyOptional({ example: 100, default: 0 })
   @IsOptional()
   @IsNumber()

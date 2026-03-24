@@ -199,7 +199,6 @@ export type BranchWhereInput = {
   isActive?: Prisma.BoolFilter<"Branch"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Branch"> | Date | string
   tenant?: Prisma.XOR<Prisma.TenantScalarRelationFilter, Prisma.TenantWhereInput>
-  inventory?: Prisma.InventoryListRelationFilter
   sales?: Prisma.SaleListRelationFilter
   transactions?: Prisma.TransactionListRelationFilter
   users?: Prisma.UserListRelationFilter
@@ -214,7 +213,6 @@ export type BranchOrderByWithRelationInput = {
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   tenant?: Prisma.TenantOrderByWithRelationInput
-  inventory?: Prisma.InventoryOrderByRelationAggregateInput
   sales?: Prisma.SaleOrderByRelationAggregateInput
   transactions?: Prisma.TransactionOrderByRelationAggregateInput
   users?: Prisma.UserOrderByRelationAggregateInput
@@ -232,7 +230,6 @@ export type BranchWhereUniqueInput = Prisma.AtLeast<{
   isActive?: Prisma.BoolFilter<"Branch"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Branch"> | Date | string
   tenant?: Prisma.XOR<Prisma.TenantScalarRelationFilter, Prisma.TenantWhereInput>
-  inventory?: Prisma.InventoryListRelationFilter
   sales?: Prisma.SaleListRelationFilter
   transactions?: Prisma.TransactionListRelationFilter
   users?: Prisma.UserListRelationFilter
@@ -272,7 +269,6 @@ export type BranchCreateInput = {
   isActive?: boolean
   createdAt?: Date | string
   tenant: Prisma.TenantCreateNestedOneWithoutBranchesInput
-  inventory?: Prisma.InventoryCreateNestedManyWithoutBranchInput
   sales?: Prisma.SaleCreateNestedManyWithoutBranchInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutBranchInput
   users?: Prisma.UserCreateNestedManyWithoutBranchInput
@@ -286,7 +282,6 @@ export type BranchUncheckedCreateInput = {
   phone?: string | null
   isActive?: boolean
   createdAt?: Date | string
-  inventory?: Prisma.InventoryUncheckedCreateNestedManyWithoutBranchInput
   sales?: Prisma.SaleUncheckedCreateNestedManyWithoutBranchInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutBranchInput
   users?: Prisma.UserUncheckedCreateNestedManyWithoutBranchInput
@@ -300,7 +295,6 @@ export type BranchUpdateInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tenant?: Prisma.TenantUpdateOneRequiredWithoutBranchesNestedInput
-  inventory?: Prisma.InventoryUpdateManyWithoutBranchNestedInput
   sales?: Prisma.SaleUpdateManyWithoutBranchNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutBranchNestedInput
   users?: Prisma.UserUpdateManyWithoutBranchNestedInput
@@ -314,7 +308,6 @@ export type BranchUncheckedUpdateInput = {
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  inventory?: Prisma.InventoryUncheckedUpdateManyWithoutBranchNestedInput
   sales?: Prisma.SaleUncheckedUpdateManyWithoutBranchNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutBranchNestedInput
   users?: Prisma.UserUncheckedUpdateManyWithoutBranchNestedInput
@@ -457,20 +450,6 @@ export type BranchUpdateOneWithoutUsersNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.BranchUpdateToOneWithWhereWithoutUsersInput, Prisma.BranchUpdateWithoutUsersInput>, Prisma.BranchUncheckedUpdateWithoutUsersInput>
 }
 
-export type BranchCreateNestedOneWithoutInventoryInput = {
-  create?: Prisma.XOR<Prisma.BranchCreateWithoutInventoryInput, Prisma.BranchUncheckedCreateWithoutInventoryInput>
-  connectOrCreate?: Prisma.BranchCreateOrConnectWithoutInventoryInput
-  connect?: Prisma.BranchWhereUniqueInput
-}
-
-export type BranchUpdateOneRequiredWithoutInventoryNestedInput = {
-  create?: Prisma.XOR<Prisma.BranchCreateWithoutInventoryInput, Prisma.BranchUncheckedCreateWithoutInventoryInput>
-  connectOrCreate?: Prisma.BranchCreateOrConnectWithoutInventoryInput
-  upsert?: Prisma.BranchUpsertWithoutInventoryInput
-  connect?: Prisma.BranchWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.BranchUpdateToOneWithWhereWithoutInventoryInput, Prisma.BranchUpdateWithoutInventoryInput>, Prisma.BranchUncheckedUpdateWithoutInventoryInput>
-}
-
 export type BranchCreateNestedOneWithoutSalesInput = {
   create?: Prisma.XOR<Prisma.BranchCreateWithoutSalesInput, Prisma.BranchUncheckedCreateWithoutSalesInput>
   connectOrCreate?: Prisma.BranchCreateOrConnectWithoutSalesInput
@@ -506,7 +485,6 @@ export type BranchCreateWithoutTenantInput = {
   phone?: string | null
   isActive?: boolean
   createdAt?: Date | string
-  inventory?: Prisma.InventoryCreateNestedManyWithoutBranchInput
   sales?: Prisma.SaleCreateNestedManyWithoutBranchInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutBranchInput
   users?: Prisma.UserCreateNestedManyWithoutBranchInput
@@ -519,7 +497,6 @@ export type BranchUncheckedCreateWithoutTenantInput = {
   phone?: string | null
   isActive?: boolean
   createdAt?: Date | string
-  inventory?: Prisma.InventoryUncheckedCreateNestedManyWithoutBranchInput
   sales?: Prisma.SaleUncheckedCreateNestedManyWithoutBranchInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutBranchInput
   users?: Prisma.UserUncheckedCreateNestedManyWithoutBranchInput
@@ -572,7 +549,6 @@ export type BranchCreateWithoutUsersInput = {
   isActive?: boolean
   createdAt?: Date | string
   tenant: Prisma.TenantCreateNestedOneWithoutBranchesInput
-  inventory?: Prisma.InventoryCreateNestedManyWithoutBranchInput
   sales?: Prisma.SaleCreateNestedManyWithoutBranchInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutBranchInput
 }
@@ -585,7 +561,6 @@ export type BranchUncheckedCreateWithoutUsersInput = {
   phone?: string | null
   isActive?: boolean
   createdAt?: Date | string
-  inventory?: Prisma.InventoryUncheckedCreateNestedManyWithoutBranchInput
   sales?: Prisma.SaleUncheckedCreateNestedManyWithoutBranchInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutBranchInput
 }
@@ -614,7 +589,6 @@ export type BranchUpdateWithoutUsersInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tenant?: Prisma.TenantUpdateOneRequiredWithoutBranchesNestedInput
-  inventory?: Prisma.InventoryUpdateManyWithoutBranchNestedInput
   sales?: Prisma.SaleUpdateManyWithoutBranchNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutBranchNestedInput
 }
@@ -627,77 +601,8 @@ export type BranchUncheckedUpdateWithoutUsersInput = {
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  inventory?: Prisma.InventoryUncheckedUpdateManyWithoutBranchNestedInput
   sales?: Prisma.SaleUncheckedUpdateManyWithoutBranchNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutBranchNestedInput
-}
-
-export type BranchCreateWithoutInventoryInput = {
-  id?: string
-  name: string
-  address?: string | null
-  phone?: string | null
-  isActive?: boolean
-  createdAt?: Date | string
-  tenant: Prisma.TenantCreateNestedOneWithoutBranchesInput
-  sales?: Prisma.SaleCreateNestedManyWithoutBranchInput
-  transactions?: Prisma.TransactionCreateNestedManyWithoutBranchInput
-  users?: Prisma.UserCreateNestedManyWithoutBranchInput
-}
-
-export type BranchUncheckedCreateWithoutInventoryInput = {
-  id?: string
-  tenantId: string
-  name: string
-  address?: string | null
-  phone?: string | null
-  isActive?: boolean
-  createdAt?: Date | string
-  sales?: Prisma.SaleUncheckedCreateNestedManyWithoutBranchInput
-  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutBranchInput
-  users?: Prisma.UserUncheckedCreateNestedManyWithoutBranchInput
-}
-
-export type BranchCreateOrConnectWithoutInventoryInput = {
-  where: Prisma.BranchWhereUniqueInput
-  create: Prisma.XOR<Prisma.BranchCreateWithoutInventoryInput, Prisma.BranchUncheckedCreateWithoutInventoryInput>
-}
-
-export type BranchUpsertWithoutInventoryInput = {
-  update: Prisma.XOR<Prisma.BranchUpdateWithoutInventoryInput, Prisma.BranchUncheckedUpdateWithoutInventoryInput>
-  create: Prisma.XOR<Prisma.BranchCreateWithoutInventoryInput, Prisma.BranchUncheckedCreateWithoutInventoryInput>
-  where?: Prisma.BranchWhereInput
-}
-
-export type BranchUpdateToOneWithWhereWithoutInventoryInput = {
-  where?: Prisma.BranchWhereInput
-  data: Prisma.XOR<Prisma.BranchUpdateWithoutInventoryInput, Prisma.BranchUncheckedUpdateWithoutInventoryInput>
-}
-
-export type BranchUpdateWithoutInventoryInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  tenant?: Prisma.TenantUpdateOneRequiredWithoutBranchesNestedInput
-  sales?: Prisma.SaleUpdateManyWithoutBranchNestedInput
-  transactions?: Prisma.TransactionUpdateManyWithoutBranchNestedInput
-  users?: Prisma.UserUpdateManyWithoutBranchNestedInput
-}
-
-export type BranchUncheckedUpdateWithoutInventoryInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  tenantId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  sales?: Prisma.SaleUncheckedUpdateManyWithoutBranchNestedInput
-  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutBranchNestedInput
-  users?: Prisma.UserUncheckedUpdateManyWithoutBranchNestedInput
 }
 
 export type BranchCreateWithoutSalesInput = {
@@ -708,7 +613,6 @@ export type BranchCreateWithoutSalesInput = {
   isActive?: boolean
   createdAt?: Date | string
   tenant: Prisma.TenantCreateNestedOneWithoutBranchesInput
-  inventory?: Prisma.InventoryCreateNestedManyWithoutBranchInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutBranchInput
   users?: Prisma.UserCreateNestedManyWithoutBranchInput
 }
@@ -721,7 +625,6 @@ export type BranchUncheckedCreateWithoutSalesInput = {
   phone?: string | null
   isActive?: boolean
   createdAt?: Date | string
-  inventory?: Prisma.InventoryUncheckedCreateNestedManyWithoutBranchInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutBranchInput
   users?: Prisma.UserUncheckedCreateNestedManyWithoutBranchInput
 }
@@ -750,7 +653,6 @@ export type BranchUpdateWithoutSalesInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tenant?: Prisma.TenantUpdateOneRequiredWithoutBranchesNestedInput
-  inventory?: Prisma.InventoryUpdateManyWithoutBranchNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutBranchNestedInput
   users?: Prisma.UserUpdateManyWithoutBranchNestedInput
 }
@@ -763,7 +665,6 @@ export type BranchUncheckedUpdateWithoutSalesInput = {
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  inventory?: Prisma.InventoryUncheckedUpdateManyWithoutBranchNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutBranchNestedInput
   users?: Prisma.UserUncheckedUpdateManyWithoutBranchNestedInput
 }
@@ -776,7 +677,6 @@ export type BranchCreateWithoutTransactionsInput = {
   isActive?: boolean
   createdAt?: Date | string
   tenant: Prisma.TenantCreateNestedOneWithoutBranchesInput
-  inventory?: Prisma.InventoryCreateNestedManyWithoutBranchInput
   sales?: Prisma.SaleCreateNestedManyWithoutBranchInput
   users?: Prisma.UserCreateNestedManyWithoutBranchInput
 }
@@ -789,7 +689,6 @@ export type BranchUncheckedCreateWithoutTransactionsInput = {
   phone?: string | null
   isActive?: boolean
   createdAt?: Date | string
-  inventory?: Prisma.InventoryUncheckedCreateNestedManyWithoutBranchInput
   sales?: Prisma.SaleUncheckedCreateNestedManyWithoutBranchInput
   users?: Prisma.UserUncheckedCreateNestedManyWithoutBranchInput
 }
@@ -818,7 +717,6 @@ export type BranchUpdateWithoutTransactionsInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tenant?: Prisma.TenantUpdateOneRequiredWithoutBranchesNestedInput
-  inventory?: Prisma.InventoryUpdateManyWithoutBranchNestedInput
   sales?: Prisma.SaleUpdateManyWithoutBranchNestedInput
   users?: Prisma.UserUpdateManyWithoutBranchNestedInput
 }
@@ -831,7 +729,6 @@ export type BranchUncheckedUpdateWithoutTransactionsInput = {
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  inventory?: Prisma.InventoryUncheckedUpdateManyWithoutBranchNestedInput
   sales?: Prisma.SaleUncheckedUpdateManyWithoutBranchNestedInput
   users?: Prisma.UserUncheckedUpdateManyWithoutBranchNestedInput
 }
@@ -852,7 +749,6 @@ export type BranchUpdateWithoutTenantInput = {
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  inventory?: Prisma.InventoryUpdateManyWithoutBranchNestedInput
   sales?: Prisma.SaleUpdateManyWithoutBranchNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutBranchNestedInput
   users?: Prisma.UserUpdateManyWithoutBranchNestedInput
@@ -865,7 +761,6 @@ export type BranchUncheckedUpdateWithoutTenantInput = {
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  inventory?: Prisma.InventoryUncheckedUpdateManyWithoutBranchNestedInput
   sales?: Prisma.SaleUncheckedUpdateManyWithoutBranchNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutBranchNestedInput
   users?: Prisma.UserUncheckedUpdateManyWithoutBranchNestedInput
@@ -886,14 +781,12 @@ export type BranchUncheckedUpdateManyWithoutTenantInput = {
  */
 
 export type BranchCountOutputType = {
-  inventory: number
   sales: number
   transactions: number
   users: number
 }
 
 export type BranchCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  inventory?: boolean | BranchCountOutputTypeCountInventoryArgs
   sales?: boolean | BranchCountOutputTypeCountSalesArgs
   transactions?: boolean | BranchCountOutputTypeCountTransactionsArgs
   users?: boolean | BranchCountOutputTypeCountUsersArgs
@@ -907,13 +800,6 @@ export type BranchCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Exten
    * Select specific fields to fetch from the BranchCountOutputType
    */
   select?: Prisma.BranchCountOutputTypeSelect<ExtArgs> | null
-}
-
-/**
- * BranchCountOutputType without action
- */
-export type BranchCountOutputTypeCountInventoryArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.InventoryWhereInput
 }
 
 /**
@@ -947,7 +833,6 @@ export type BranchSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   isActive?: boolean
   createdAt?: boolean
   tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
-  inventory?: boolean | Prisma.Branch$inventoryArgs<ExtArgs>
   sales?: boolean | Prisma.Branch$salesArgs<ExtArgs>
   transactions?: boolean | Prisma.Branch$transactionsArgs<ExtArgs>
   users?: boolean | Prisma.Branch$usersArgs<ExtArgs>
@@ -989,7 +874,6 @@ export type BranchSelectScalar = {
 export type BranchOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tenantId" | "name" | "address" | "phone" | "isActive" | "createdAt", ExtArgs["result"]["branch"]>
 export type BranchInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
-  inventory?: boolean | Prisma.Branch$inventoryArgs<ExtArgs>
   sales?: boolean | Prisma.Branch$salesArgs<ExtArgs>
   transactions?: boolean | Prisma.Branch$transactionsArgs<ExtArgs>
   users?: boolean | Prisma.Branch$usersArgs<ExtArgs>
@@ -1006,7 +890,6 @@ export type $BranchPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
   name: "Branch"
   objects: {
     tenant: Prisma.$TenantPayload<ExtArgs>
-    inventory: Prisma.$InventoryPayload<ExtArgs>[]
     sales: Prisma.$SalePayload<ExtArgs>[]
     transactions: Prisma.$TransactionPayload<ExtArgs>[]
     users: Prisma.$UserPayload<ExtArgs>[]
@@ -1414,7 +1297,6 @@ readonly fields: BranchFieldRefs;
 export interface Prisma__BranchClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   tenant<T extends Prisma.TenantDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TenantDefaultArgs<ExtArgs>>): Prisma.Prisma__TenantClient<runtime.Types.Result.GetResult<Prisma.$TenantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  inventory<T extends Prisma.Branch$inventoryArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Branch$inventoryArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sales<T extends Prisma.Branch$salesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Branch$salesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SalePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   transactions<T extends Prisma.Branch$transactionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Branch$transactionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TransactionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   users<T extends Prisma.Branch$usersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Branch$usersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -1852,30 +1734,6 @@ export type BranchDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Limit how many Branches to delete.
    */
   limit?: number
-}
-
-/**
- * Branch.inventory
- */
-export type Branch$inventoryArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Inventory
-   */
-  select?: Prisma.InventorySelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Inventory
-   */
-  omit?: Prisma.InventoryOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.InventoryInclude<ExtArgs> | null
-  where?: Prisma.InventoryWhereInput
-  orderBy?: Prisma.InventoryOrderByWithRelationInput | Prisma.InventoryOrderByWithRelationInput[]
-  cursor?: Prisma.InventoryWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.InventoryScalarFieldEnum | Prisma.InventoryScalarFieldEnum[]
 }
 
 /**
