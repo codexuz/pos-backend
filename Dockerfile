@@ -9,10 +9,10 @@ COPY prisma ./prisma/
 # Install dependencies (including devDependencies for build)
 RUN npm install --legacy-peer-deps
 
+COPY . .
+
 # Generate Prisma client
 RUN npx prisma generate
-
-COPY . .
 
 # Run build
 RUN npm run build
