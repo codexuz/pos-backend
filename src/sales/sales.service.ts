@@ -6,7 +6,7 @@ import { CreateSaleDto } from './dto';
 export class SalesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(tenantId: string, sellerId: string, dto: CreateSaleDto) {
+  async create(tenantId: string, branchId: string, sellerId: string, dto: CreateSaleDto) {
     const items = dto.items.map((item) => {
       const totalPrice = item.quantity * item.unitPrice;
       return { ...item, totalPrice };
@@ -25,7 +25,7 @@ export class SalesService {
       const sale = await tx.sale.create({
         data: {
           tenantId,
-          branchId: dto.branchId,
+          branchId,
           sellerId,
           clientId: dto.clientId,
           totalAmount,
@@ -65,7 +65,7 @@ export class SalesService {
       // Deduct inventory
       for (const item of items) {
         await tx.inventory.updateMany({
-          where: { productId: item.productId, branchId: dto.branchId },
+          where: { productId: item.productId, tenantId },
           data: { quantity: { decrement: item.quantity } },
         });
       }

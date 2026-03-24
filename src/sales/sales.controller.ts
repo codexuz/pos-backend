@@ -14,10 +14,11 @@ export class SalesController {
   @ApiOperation({ summary: 'Create a sale with items' })
   create(
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('sub') sellerId: string,
+    @CurrentUser('branchId') branchId: string,
+    @CurrentUser('userId') sellerId: string,
     @Body() dto: CreateSaleDto,
   ) {
-    return this.service.create(tenantId, sellerId, dto);
+    return this.service.create(tenantId, branchId, sellerId, dto);
   }
 
   @Get()
