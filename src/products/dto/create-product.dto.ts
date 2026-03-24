@@ -56,4 +56,18 @@ export class CreateProductDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ example: 100, default: 0, description: 'Initial inventory quantity' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  quantity?: number;
+
+  @ApiPropertyOptional({ example: 10, default: 0, description: 'Minimum stock alert threshold' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  minQuantity?: number;
 }

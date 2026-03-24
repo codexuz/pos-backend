@@ -6,10 +6,28 @@ import { CreateProductDto, UpdateProductDto } from './dto';
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
-  create(tenantId: string, dto: CreateProductDto) {
-    return this.prisma.product.create({
-      data: { ...dto, tenantId } as any,
-      include: { category: true, unit: true },
+  async create(tenantId: string, dto: CreateProductDto) {
+    const { quantity, minQuantity, ...productData } = dto;
+
+    return this.prisma.$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: { ...productData, tenantId } as any,
+        include: { category: true, unit: true },
+      });
+
+      await tx.inventory.create({
+        data: {
+          productId: product.id,
+          tenantId,
+          quantity: quantity ?? 0,
+          minQuantity: minQuantity ?? 0,
+        },
+      });
+
+      return tx.product.findUnique({
+        where: { id: product.id },
+        include: { category: true, unit: true, inventory: true },
+      });
     });
   }
 
