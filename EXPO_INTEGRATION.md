@@ -395,6 +395,27 @@ const submitSale = async (paidAmount: number) => {
   });
   return res.data; // Sale with items, seller, client info
 };
+
+// Update sale (e.g. edit items, change client, adjust discount)
+const updateSale = async (saleId: string) => {
+  const res = await api.patch(`/sales/${saleId}`, {
+    clientId,
+    discountAmount: discount,
+    notes: 'Updated by cashier',
+    // Pass items to replace all sale items (inventory auto-adjusted)
+    items: cart.map(({ productId, quantity, unitPrice }) => ({
+      productId,
+      quantity,
+      unitPrice,
+    })),
+  });
+  return res.data;
+};
+
+// Delete sale (restores inventory, cascade-deletes items & payments)
+const deleteSale = async (saleId: string) => {
+  await api.delete(`/sales/${saleId}`);
+};
 ```
 
 ### Payments Screen
@@ -597,8 +618,14 @@ const summary = await reportsApi.salesSummary(branchId, firstOfMonth);
 | `POST` | `/sales` | `{ branchId, clientId?, discountAmount?, paidAmount?, paymentMethod?, notes?, items: [{ productId, quantity, unitPrice }] }` |
 | `GET` | `/sales?branchId=` | Query: `branchId` (optional) |
 | `GET` | `/sales/:id` | — |
+| `PATCH` | `/sales/:id` | `{ clientId?, discountAmount?, paymentStatus?, notes?, items?: [{ productId, quantity, unitPrice }] }` |
+| `DELETE` | `/sales/:id` | — |
 
 > **Note:** `POST /sales` automatically: creates sale + items, creates payment if `paidAmount > 0`, deducts inventory. The seller is auto-set from JWT.
+>
+> `PATCH /sales/:id` — When `items` are provided, old items are removed with inventory restored, then new items are created and inventory deducted. `paymentStatus` is auto-recalculated if not explicitly set.
+>
+> `DELETE /sales/:id` — Deletes the sale, its items, and associated payments (cascade). Inventory is restored for all items.
 
 ### Payments
 
