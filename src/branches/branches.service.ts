@@ -23,7 +23,7 @@ export class BranchesService {
     const branch = await this.prisma.branch.findFirst({
       where: { id, tenantId },
       include: {
-        _count: { select: { users: true, inventory: true, sales: true } },
+        _count: { select: { users: true, sales: true, transactions: true } },
       },
     });
     if (!branch) throw new NotFoundException('Branch not found');

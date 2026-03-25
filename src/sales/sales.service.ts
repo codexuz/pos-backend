@@ -26,6 +26,17 @@ export class SalesService {
       paymentStatus = 'partial';
     }
 
+    const productIds = items.map((item) => item.productId);
+    const existingProducts = await this.prisma.product.findMany({
+      where: { id: { in: productIds }, tenantId },
+      select: { id: true },
+    });
+    const existingIds = new Set(existingProducts.map((p) => p.id));
+    const missingIds = productIds.filter((id) => !existingIds.has(id));
+    if (missingIds.length > 0) {
+      throw new NotFoundException(`Products not found: ${missingIds.join(', ')}`);
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const sale = await tx.sale.create({
         data: {
