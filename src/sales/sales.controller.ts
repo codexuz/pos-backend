@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SalesService } from './sales.service';
-import { CreateSaleDto } from './dto';
+import { CreateSaleDto, UpdateSaleDto } from './dto';
 import { CurrentUser } from '../auth/decorators';
 
 @ApiTags('Sales')
@@ -32,5 +32,21 @@ export class SalesController {
   @ApiOperation({ summary: 'Get sale by ID' })
   findOne(@CurrentUser('tenantId') tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(tenantId, id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a sale' })
+  update(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateSaleDto,
+  ) {
+    return this.service.update(tenantId, id, dto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a sale' })
+  remove(@CurrentUser('tenantId') tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.remove(tenantId, id);
   }
 }
