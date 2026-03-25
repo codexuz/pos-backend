@@ -51,6 +51,11 @@ export class CreateSaleDto {
   @Type(() => Number)
   paidAmount?: number;
 
+  @ApiPropertyOptional({ enum: ['pending', 'partial', 'paid'], default: 'auto-calculated' })
+  @IsOptional()
+  @IsEnum(['pending', 'partial', 'paid'])
+  paymentStatus?: 'pending' | 'partial' | 'paid';
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

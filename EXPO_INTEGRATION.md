@@ -80,6 +80,7 @@ Dashboard
   ├── POS (Sell)     → Create sales with items
   ├── Clients        → CRUD customer database
   ├── Payments       → Record payments for sales
+  ├── Debts          → Unpaid sales, client balances, aging
   ├── Expenses
   │   ├── Categories → Expense category management
   │   └── Transactions → Record income/expenses
@@ -439,6 +440,40 @@ const updateStock = async (inventoryId: string, quantity: number) => {
 };
 ```
 
+### Debts Screen (Owner)
+
+```typescript
+const debtsApi = {
+  // All unpaid/partially paid sales
+  list: (branchId?: string, clientId?: string) =>
+    api.get('/debts', { params: { branchId, clientId } }),
+
+  // Debt summary with aging breakdown
+  summary: (branchId?: string) =>
+    api.get('/debts/summary', { params: { branchId } }),
+
+  // Per-client debt balances (sorted by highest debt)
+  clientBalances: () =>
+    api.get('/debts/clients'),
+
+  // Single client debt detail with unpaid sales & payments
+  clientDebt: (clientId: string) =>
+    api.get(`/debts/clients/${clientId}`),
+};
+
+// Example: Show debt summary
+const summary = await debtsApi.summary();
+// → { totalDebt, totalSales, pendingCount, partialCount,
+//    aging: { current, '31-60', '61-90', '90+' } }
+
+// Example: List clients ranked by debt
+const clients = await debtsApi.clientBalances();
+// → [{ id, fullName, phone, totalDebt, unpaidSalesCount, oldestDebtDate, oldestDebtDays }]
+
+// Example: Pay off a debt (uses existing payments endpoint)
+await api.post('/payments', { saleId, amount: 500, paymentMethod: 'cash' });
+```
+
 ### Reports Screen (Owner only)
 
 ```typescript
@@ -593,6 +628,17 @@ const summary = await reportsApi.salesSummary(branchId, firstOfMonth);
 | `GET` | `/transactions?branchId=&type=` | Query: `branchId`, `type` (both optional) | all |
 | `GET` | `/transactions/:id` | — | all |
 
+### Debts
+
+| Method | Endpoint | Query Params | Description |
+|--------|----------|--------------|-------------|
+| `GET` | `/debts` | `branchId?, clientId?` | All unpaid/partially paid sales with debt amount and age |
+| `GET` | `/debts/summary` | `branchId?` | Aggregate debt stats with aging buckets (current, 31-60, 61-90, 90+) |
+| `GET` | `/debts/clients` | — | Per-client debt ranking (sorted by highest debt) |
+| `GET` | `/debts/clients/:clientId` | — | Single client debt detail with unpaid sales and payment history |
+
+> **Note:** To pay off a debt, use `POST /payments` with the `saleId` — the sale's `paidAmount` and `paymentStatus` update automatically.
+
 ### Reports
 
 | Method | Endpoint | Query Params | Roles |
@@ -644,7 +690,7 @@ const getScreensForRole = (role: UserRole) => {
       return common;
     case 'owner':
       return [...common, 'Branches', 'Users', 'Categories', 'Units',
-        'Inventory', 'ExpenseCategories', 'Transactions', 'Reports'];
+        'Inventory', 'Debts', 'ExpenseCategories', 'Transactions', 'Reports'];
     case 'super_admin':
       return ['Tenants', 'SubscriptionPlans', ...common, 'Branches',
         'Users', 'Categories', 'Units', 'Inventory',

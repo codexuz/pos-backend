@@ -20,6 +20,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { ExpenseCategoriesModule } from './expense-categories/expense-categories.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { ReportsModule } from './reports/reports.module';
+import { DebtsModule } from './debts/debts.module';
 import { JwtAuthGuard, RolesGuard } from './auth/guards';
 
 @Module({
@@ -42,6 +43,7 @@ import { JwtAuthGuard, RolesGuard } from './auth/guards';
     ExpenseCategoriesModule,
     TransactionsModule,
     ReportsModule,
+    DebtsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -18,8 +18,13 @@ export class SalesService {
     const paidAmount = dto.paidAmount ?? 0;
 
     let paymentStatus: 'pending' | 'partial' | 'paid' = 'pending';
-    if (paidAmount >= finalAmount) paymentStatus = 'paid';
-    else if (paidAmount > 0) paymentStatus = 'partial';
+    if (dto.paymentStatus) {
+      paymentStatus = dto.paymentStatus;
+    } else if (paidAmount >= finalAmount) {
+      paymentStatus = 'paid';
+    } else if (paidAmount > 0) {
+      paymentStatus = 'partial';
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const sale = await tx.sale.create({
