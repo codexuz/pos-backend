@@ -27,7 +27,10 @@ export class ProductsService {
       return tx.product.findUnique({
         where: { id: product.id },
         include: { category: true, unit: true, inventory: true },
-      });
+      }).then(product => ({
+        ...product,
+        inventoryStatus: product.inventory && product.inventory.length > 0 && product.inventory[0].quantity <= (product.inventory[0].minQuantity || 0) ? 'low-stock' : 'in-stock'
+      }));
     });
   }
 
@@ -44,9 +47,12 @@ export class ProductsService {
           ],
         }),
       },
-      include: { category: true, unit: true },
+      include: { category: true, unit: true, inventory: true },
       orderBy: { createdAt: 'desc' },
-    });
+    }).then(products => products.map(product => ({
+      ...product,
+      inventoryStatus: product.inventory && product.inventory.length > 0 && product.inventory[0].quantity <= (product.inventory[0].minQuantity || 0) ? 'low-stock' : 'in-stock'
+    })));
   }
 
   async findOne(id: string, tenantId: string) {
@@ -59,7 +65,10 @@ export class ProductsService {
       },
     });
     if (!product) throw new NotFoundException('Product not found');
-    return product;
+    return {
+      ...product,
+      inventoryStatus: product.inventory && product.inventory.length > 0 && product.inventory[0].quantity <= (product.inventory[0].minQuantity || 0) ? 'low-stock' : 'in-stock'
+    };
   }
 
   async update(id: string, tenantId: string, dto: UpdateProductDto) {
