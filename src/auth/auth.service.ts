@@ -102,7 +102,7 @@ export class AuthService {
     return { message: 'All sessions revoked successfully' };
   }
 
-  async getActiveSessions(userId: string) {
+  async getActiveSessions(userId: string, currentSessionId: string) {
     const sessions = await this.prisma.session.findMany({
       where: { userId, isRevoked: false, expiresAt: { gt: new Date() } },
       select: {
@@ -114,7 +114,24 @@ export class AuthService {
       },
       orderBy: { createdAt: 'desc' },
     });
-    return sessions;
+    return sessions.map((session) => ({
+      ...session,
+      isCurrent: session.id === currentSessionId,
+    }));
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    const session = await this.prisma.session.findFirst({
+      where: { id: sessionId, userId, isRevoked: false },
+    });
+    if (!session) {
+      throw new UnauthorizedException('Session not found');
+    }
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { isRevoked: true },
+    });
+    return { message: 'Session revoked successfully' };
   }
 
   private async generateTokens(user: any, ip?: string, userAgent?: string) {

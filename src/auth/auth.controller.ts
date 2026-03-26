@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, HttpCode, HttpStatus, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, HttpCode, HttpStatus, Req, Param, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
@@ -51,7 +51,20 @@ export class AuthController {
   @Get('sessions')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all active sessions for current user' })
-  getActiveSessions(@CurrentUser('userId') userId: string) {
-    return this.authService.getActiveSessions(userId);
+  getActiveSessions(
+    @CurrentUser('userId') userId: string,
+    @CurrentUser('sessionId') sessionId: string,
+  ) {
+    return this.authService.getActiveSessions(userId, sessionId);
+  }
+
+  @Delete('sessions/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Revoke a specific session' })
+  revokeSession(
+    @CurrentUser('userId') userId: string,
+    @Param('id', ParseUUIDPipe) sessionId: string,
+  ) {
+    return this.authService.revokeSession(userId, sessionId);
   }
 }
