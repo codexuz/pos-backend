@@ -9,8 +9,11 @@ export class MinioService implements OnModuleInit {
   private bucketName: string;
 
   constructor(private configService: ConfigService) {
+    const rawEndpoint = this.configService.getOrThrow<string>('MINIO_ENDPOINT');
+    const endPoint = rawEndpoint.replace(/^https?:\/\//, '');
+
     this.client = new Minio.Client({
-      endPoint: this.configService.getOrThrow<string>('MINIO_ENDPOINT'),
+      endPoint,
       port: parseInt(this.configService.getOrThrow<string>('MINIO_PORT'), 10),
       useSSL: this.configService.get<string>('MINIO_USE_SSL') === 'true',
       accessKey: this.configService.getOrThrow<string>('MINIO_ACCESS_KEY'),
