@@ -21,7 +21,7 @@ import { ExpenseCategoriesModule } from './expense-categories/expense-categories
 import { TransactionsModule } from './transactions/transactions.module';
 import { ReportsModule } from './reports/reports.module';
 import { DebtsModule } from './debts/debts.module';
-import { JwtAuthGuard, RolesGuard } from './auth/guards';
+import { JwtAuthGuard, RolesGuard, SubscriptionGuard } from './auth/guards';
 
 @Module({
   imports: [
@@ -50,6 +50,7 @@ import { JwtAuthGuard, RolesGuard } from './auth/guards';
     AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: SubscriptionGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
