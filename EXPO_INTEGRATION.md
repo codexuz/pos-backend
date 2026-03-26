@@ -241,7 +241,28 @@ export const authApi = {
   },
 
   logout: async () => {
+    try { await api.post('/auth/logout'); } catch {}
     await SecureStore.deleteItemAsync('access_token');
+  },
+
+  // Get all active sessions (each has isCurrent flag)
+  getSessions: async () => {
+    const res = await api.get('/auth/sessions');
+    return res.data;
+    // → [{ id, ipAddress, userAgent, createdAt, expiresAt, isCurrent: true/false }]
+  },
+
+  // Revoke a specific session
+  revokeSession: async (sessionId: string) => {
+    const res = await api.delete(`/auth/sessions/${sessionId}`);
+    return res.data;
+  },
+
+  // Revoke all sessions
+  logoutAll: async () => {
+    const res = await api.post('/auth/logout-all');
+    await SecureStore.deleteItemAsync('access_token');
+    return res.data;
   },
 };
 ```
@@ -539,6 +560,10 @@ const summary = await reportsApi.salesSummary(branchId, firstOfMonth);
 | `POST` | `/auth/register` | `{ phone, password, fullName, tenantName, language? }` | Register owner + tenant |
 | `POST` | `/auth/login` | `{ phone, password }` | Login, returns JWT |
 | `GET` | `/auth/profile` | — | Get current user profile |
+| `POST` | `/auth/logout` | — | Logout current session |
+| `POST` | `/auth/logout-all` | — | Revoke all sessions |
+| `GET` | `/auth/sessions` | — | List active sessions (with `isCurrent` flag) |
+| `DELETE` | `/auth/sessions/:id` | — | Revoke a specific session |
 
 ### Branches
 
