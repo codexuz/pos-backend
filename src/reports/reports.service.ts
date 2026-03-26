@@ -120,14 +120,12 @@ export class ReportsService {
   }
 
   async inventoryReport(tenantId: string, branchId?: string) {
-    const where: any = { branch: { tenantId } };
-    if (branchId) where.branchId = branchId;
+    const where: any = { tenantId };
 
     const items = await this.prisma.inventory.findMany({
       where,
       include: {
         product: { select: { id: true, name: true, sku: true, costPrice: true, sellingPrice: true } },
-        branch: { select: { id: true, name: true } },
       },
       orderBy: { quantity: 'asc' },
     });
@@ -148,7 +146,6 @@ export class ReportsService {
       items: items.map((i) => ({
         inventoryId: i.id,
         product: i.product,
-        branch: i.branch,
         quantity: Number(i.quantity),
         minQuantity: i.minQuantity ? Number(i.minQuantity) : null,
         isLowStock: i.minQuantity !== null && Number(i.quantity) <= Number(i.minQuantity),
