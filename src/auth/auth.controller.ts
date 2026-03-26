@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Get, HttpCode, HttpStatus, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
 import { Public, CurrentUser } from './decorators';
+import { Request } from 'express';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -12,16 +13,16 @@ export class AuthController {
   @Public()
   @Post('register')
   @ApiOperation({ summary: 'Register a new owner with tenant' })
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  register(@Body() dto: RegisterDto, @Req() req: Request) {
+    return this.authService.register(dto, req.ip, req.headers['user-agent']);
   }
 
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with phone and password' })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  login(@Body() dto: LoginDto, @Req() req: Request) {
+    return this.authService.login(dto, req.ip, req.headers['user-agent']);
   }
 
   @Get('profile')
@@ -29,5 +30,28 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   getProfile(@CurrentUser('userId') userId: string) {
     return this.authService.getProfile(userId);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout current session (blacklist JWT)' })
+  logout(@CurrentUser('sessionId') sessionId: string) {
+    return this.authService.logout(sessionId);
+  }
+
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout all sessions for current user' })
+  logoutAll(@CurrentUser('userId') userId: string) {
+    return this.authService.logoutAll(userId);
+  }
+
+  @Get('sessions')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all active sessions for current user' })
+  getActiveSessions(@CurrentUser('userId') userId: string) {
+    return this.authService.getActiveSessions(userId);
   }
 }

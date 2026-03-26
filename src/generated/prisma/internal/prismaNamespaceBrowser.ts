@@ -55,6 +55,7 @@ export const ModelName = {
   Tenant: 'Tenant',
   Branch: 'Branch',
   User: 'User',
+  Session: 'Session',
   Unit: 'Unit',
   Category: 'Category',
   Product: 'Product',
@@ -145,6 +146,20 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const SessionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  isRevoked: 'isRevoked',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+} as const
+
+export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
 
 
 export const UnitScalarFieldEnum = {

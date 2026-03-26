@@ -149,9 +149,29 @@ model User {
   branch       Branch?       @relation(fields: [branchId], references: [id])
   sales        Sale[]
   transactions Transaction[]
+  sessions     Session[]
 
   @@unique([phone, tenantId], map: "users_phone_tenant_idx")
   @@map("users")
+}
+
+// ─── Sessions (JWT Blacklist) ────────────────────────────────────────
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token], map: "sessions_token_idx")
+  @@index([userId], map: "sessions_user_id_idx")
+  @@map("sessions")
 }
 
 // ─── Units ───────────────────────────────────────────────────────────

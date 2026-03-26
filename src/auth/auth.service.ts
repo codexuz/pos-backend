@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto, RegisterDto } from './dto';
@@ -9,9 +10,10 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto, ip?: string, userAgent?: string) {
     const existing = await this.prisma.user.findFirst({
       where: { phone: dto.phone },
     });
@@ -21,11 +23,23 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
+    const basicPlan = await this.prisma.subscriptionPlan.findFirst({
+      where: { isActive: true },
+      orderBy: { price: 'asc' },
+    });
+
+    const now = new Date();
+    const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
     const tenant = await this.prisma.tenant.create({
       data: {
         name: dto.tenantName,
         ownerPhone: dto.phone,
         language: (dto.language as any) ?? 'en',
+        subscriptionPlanId: basicPlan?.id,
+        subscriptionStatus: 'trial',
+        subscriptionStart: now,
+        subscriptionEnd: trialEnd,
       },
     });
 
@@ -40,11 +54,11 @@ export class AuthService {
       },
     });
 
-    const tokens = await this.generateTokens(user);
+    const tokens = await this.generateTokens(user, ip, userAgent);
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, ip?: string, userAgent?: string) {
     const user = await this.prisma.user.findFirst({
       where: { phone: dto.phone, isActive: true },
     });
@@ -57,7 +71,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const tokens = await this.generateTokens(user);
+    const tokens = await this.generateTokens(user, ip, userAgent);
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
@@ -72,18 +86,90 @@ export class AuthService {
     return this.sanitizeUser(user);
   }
 
-  private async generateTokens(user: any) {
-    const payload = {
+  async logout(sessionId: string) {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { isRevoked: true },
+    });
+    return { message: 'Logged out successfully' };
+  }
+
+  async logoutAll(userId: string) {
+    await this.prisma.session.updateMany({
+      where: { userId, isRevoked: false },
+      data: { isRevoked: true },
+    });
+    return { message: 'All sessions revoked successfully' };
+  }
+
+  async getActiveSessions(userId: string) {
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, isRevoked: false, expiresAt: { gt: new Date() } },
+      select: {
+        id: true,
+        ipAddress: true,
+        userAgent: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return sessions;
+  }
+
+  private async generateTokens(user: any, ip?: string, userAgent?: string) {
+    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '7d');
+    const expiresAt = this.calculateExpiry(expiresIn);
+
+    const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       phone: user.phone,
       role: user.role,
       tenantId: user.tenantId,
       branchId: user.branchId,
+    });
+
+    const session = await this.prisma.session.create({
+      data: {
+        userId: user.id,
+        token: accessToken,
+        ipAddress: ip,
+        userAgent: userAgent,
+        expiresAt,
+      },
+    });
+
+    const tokenWithSession = await this.jwtService.signAsync({
+      sub: user.id,
+      phone: user.phone,
+      role: user.role,
+      tenantId: user.tenantId,
+      branchId: user.branchId,
+      sessionId: session.id,
+    });
+
+    await this.prisma.session.update({
+      where: { id: session.id },
+      data: { token: tokenWithSession },
+    });
+
+    return { accessToken: tokenWithSession };
+  }
+
+  private calculateExpiry(expiresIn: string): Date {
+    const match = expiresIn.match(/^(\d+)(s|m|h|d)$/);
+    if (!match) return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+    const multipliers: Record<string, number> = {
+      s: 1000,
+      m: 60 * 1000,
+      h: 60 * 60 * 1000,
+      d: 24 * 60 * 60 * 1000,
     };
 
-    const accessToken = await this.jwtService.signAsync(payload);
-
-    return { accessToken };
+    return new Date(Date.now() + value * multipliers[unit]);
   }
 
   private sanitizeUser(user: any) {

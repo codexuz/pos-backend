@@ -38,6 +38,11 @@ export type Branch = Prisma.BranchModel
  */
 export type User = Prisma.UserModel
 /**
+ * Model Session
+ * 
+ */
+export type Session = Prisma.SessionModel
+/**
  * Model Unit
  * 
  */
