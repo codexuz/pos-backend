@@ -10,6 +10,13 @@ export class ProductsService {
     private minio: MinioService,
   ) {}
 
+  private async resolveImageUrl<T extends { imageUrl?: string | null }>(product: T): Promise<T> {
+    if (product.imageUrl) {
+      return { ...product, imageUrl: await this.minio.getImageUrl(product.imageUrl) };
+    }
+    return { ...product, imageUrl: null };
+  }
+
   async create(tenantId: string, dto: CreateProductDto, image?: Express.Multer.File) {
     const { quantity, minQuantity, ...productData } = dto;
 
@@ -36,15 +43,14 @@ export class ProductsService {
         },
       });
 
-      return tx.product.findUnique({
+      const created = await tx.product.findUnique({
         where: { id: product.id },
         include: { category: true, unit: true, inventory: true },
-      }).then(product => {
-        const inventory = product.inventory && product.inventory.length > 0 ? product.inventory[0] : null;
-        return {
-          ...product,
-          inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock'
-        };
+      });
+      const inventory = created.inventory && created.inventory.length > 0 ? created.inventory[0] : null;
+      return this.resolveImageUrl({
+        ...created,
+        inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock'
       });
     });
   }
@@ -64,13 +70,13 @@ export class ProductsService {
       },
       include: { category: true, unit: true, inventory: true },
       orderBy: { createdAt: 'desc' },
-    }).then(products => products.map(product => {
+    }).then(products => Promise.all(products.map(async product => {
       const inventory = product.inventory && product.inventory.length > 0 ? product.inventory[0] : null;
-      return {
+      return this.resolveImageUrl({
         ...product,
         inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock'
-      };
-    }));
+      });
+    })));
   }
 
   async findOne(id: string, tenantId: string) {
@@ -84,19 +90,20 @@ export class ProductsService {
     });
     if (!product) throw new NotFoundException('Product not found');
     const inventory = product.inventory && product.inventory.length > 0 ? product.inventory[0] : null;
-    return {
+    return this.resolveImageUrl({
       ...product,
       inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock'
-    };
+    });
   }
 
   async update(id: string, tenantId: string, dto: UpdateProductDto) {
     await this.findOne(id, tenantId);
-    return this.prisma.product.update({
+    const updated = await this.prisma.product.update({
       where: { id },
       data: dto as any,
       include: { category: true, unit: true },
     });
+    return this.resolveImageUrl(updated);
   }
 
   async remove(id: string, tenantId: string) {
@@ -120,11 +127,12 @@ export class ProductsService {
       file.mimetype,
     );
 
-    return this.prisma.product.update({
+    const updated = await this.prisma.product.update({
       where: { id },
       data: { imageUrl: objectName },
       include: { category: true, unit: true },
     });
+    return this.resolveImageUrl(updated);
   }
 
   async removeImage(id: string, tenantId: string) {
