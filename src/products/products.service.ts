@@ -1,13 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MinioService } from '../minio/minio.service';
 import { CreateProductDto, UpdateProductDto } from './dto';
 
 @Injectable()
 export class ProductsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private minio: MinioService,
+  ) {}
 
-  async create(tenantId: string, dto: CreateProductDto) {
+  async create(tenantId: string, dto: CreateProductDto, image?: Express.Multer.File) {
     const { quantity, minQuantity, ...productData } = dto;
+
+    if (image) {
+      productData.imageUrl = await this.minio.uploadImage(
+        image.buffer,
+        image.originalname,
+        image.mimetype,
+      );
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.create({
@@ -93,5 +105,43 @@ export class ProductsService {
       where: { id },
       data: { isActive: false },
     });
+  }
+
+  async uploadImage(id: string, tenantId: string, file: Express.Multer.File) {
+    const product = await this.findOne(id, tenantId);
+
+    if (product.imageUrl) {
+      await this.minio.deleteImage(product.imageUrl);
+    }
+
+    const objectName = await this.minio.uploadImage(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+
+    return this.prisma.product.update({
+      where: { id },
+      data: { imageUrl: objectName },
+      include: { category: true, unit: true },
+    });
+  }
+
+  async removeImage(id: string, tenantId: string) {
+    const product = await this.findOne(id, tenantId);
+
+    if (product.imageUrl) {
+      await this.minio.deleteImage(product.imageUrl);
+    }
+
+    return this.prisma.product.update({
+      where: { id },
+      data: { imageUrl: null },
+      include: { category: true, unit: true },
+    });
+  }
+
+  async getImageUrl(objectName: string): Promise<string> {
+    return this.minio.getImageUrl(objectName);
   }
 }

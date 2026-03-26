@@ -21,6 +21,7 @@ import { ExpenseCategoriesModule } from './expense-categories/expense-categories
 import { TransactionsModule } from './transactions/transactions.module';
 import { ReportsModule } from './reports/reports.module';
 import { DebtsModule } from './debts/debts.module';
+import { MinioModule } from './minio/minio.module';
 import { JwtAuthGuard, RolesGuard, SubscriptionGuard } from './auth/guards';
 
 @Module({
@@ -44,6 +45,7 @@ import { JwtAuthGuard, RolesGuard, SubscriptionGuard } from './auth/guards';
     TransactionsModule,
     ReportsModule,
     DebtsModule,
+    MinioModule,
   ],
   controllers: [AppController],
   providers: [

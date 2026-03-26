@@ -333,7 +333,7 @@ const fetchProducts = async (search?: string) => {
   return res.data;  // Array of products with category, unit, inventory
 };
 
-// Create product
+// Create product (with optional image)
 const createProduct = async (product: {
   name: string;
   categoryId?: string;
@@ -342,9 +342,23 @@ const createProduct = async (product: {
   barcode?: string;
   costPrice?: number;
   sellingPrice?: number;
-  imageUrl?: string;
-}) => {
-  const res = await api.post('/products', product);
+  quantity?: number;
+  minQuantity?: number;
+}, image?: { uri: string; name: string; type: string }) => {
+  const formData = new FormData();
+  Object.entries(product).forEach(([key, value]) => {
+    if (value !== undefined) formData.append(key, String(value));
+  });
+  if (image) {
+    formData.append('image', {
+      uri: image.uri,
+      name: image.name,
+      type: image.type,
+    } as any);
+  }
+  const res = await api.post('/products', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return res.data;
 };
 
@@ -352,6 +366,25 @@ const createProduct = async (product: {
 const updateProduct = async (id: string, data: Partial<typeof product>) => {
   const res = await api.patch(`/products/${id}`, data);
   return res.data;
+};
+
+// Upload / replace product image
+const uploadProductImage = async (id: string, image: { uri: string; name: string; type: string }) => {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: image.uri,
+    name: image.name,
+    type: image.type,
+  } as any);
+  const res = await api.post(`/products/${id}/image`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+};
+
+// Delete product image
+const deleteProductImage = async (id: string) => {
+  await api.delete(`/products/${id}/image`);
 };
 
 // Deactivate product
@@ -609,10 +642,12 @@ const summary = await reportsApi.salesSummary(branchId, firstOfMonth);
 
 | Method | Endpoint | Body/Query |
 |--------|----------|------------|
-| `POST` | `/products` | `{ name, categoryId?, unitId?, sku?, barcode?, costPrice?, sellingPrice?, imageUrl? }` |
+| `POST` | `/products` | `multipart/form-data: { name, categoryId?, unitId?, sku?, barcode?, costPrice?, sellingPrice?, quantity?, minQuantity?, image? }` |
 | `GET` | `/products?search=` | Query: `search` (matches name, SKU, barcode) |
 | `GET` | `/products/:id` | — |
 | `PATCH` | `/products/:id` | `{ name?, categoryId?, ... }` |
+| `POST` | `/products/:id/image` | `multipart/form-data: { file }` (max 50MB, jpeg/png/webp/gif) |
+| `DELETE` | `/products/:id/image` | — (removes image from storage) |
 | `DELETE` | `/products/:id` | — (deactivates) |
 
 ### Inventory
