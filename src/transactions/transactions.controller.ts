@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { TransactionsService } from './transactions.service';
-import { CreateTransactionDto } from './dto';
+import { CreateTransactionDto, UpdateTransactionDto } from './dto';
 import { CurrentUser } from '../auth/decorators';
 import { Roles } from '../auth/decorators';
 import { UserRole } from '../generated/prisma/client';
@@ -39,5 +39,26 @@ export class TransactionsController {
   @ApiOperation({ summary: 'Get transaction by ID' })
   findOne(@CurrentUser('tenantId') tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id, tenantId);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.owner, UserRole.super_admin)
+  @ApiOperation({ summary: 'Update a transaction' })
+  update(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTransactionDto,
+  ) {
+    return this.service.update(id, tenantId, dto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.owner, UserRole.super_admin)
+  @ApiOperation({ summary: 'Delete a transaction' })
+  remove(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.remove(id, tenantId);
   }
 }
