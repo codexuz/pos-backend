@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { InventoryService } from '../inventory/inventory.service';
 import { CreateSaleDto, UpdateSaleDto } from './dto';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class SalesService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private inventoryService: InventoryService,
   ) {}
 
   async create(tenantId: string, branchId: string, sellerId: string, dto: CreateSaleDto) {
@@ -100,6 +102,12 @@ export class SalesService {
       this.logger.error('Failed to send sale notification', err),
     );
 
+    // Check for low-stock products after inventory deduction (fire-and-forget)
+    const soldProductIds = items.map((item) => item.productId);
+    this.inventoryService.checkAndNotifyLowStock(tenantId, soldProductIds).catch((err) =>
+      this.logger.error('Failed to send low-stock notification', err),
+    );
+
     return sale;
   }
 
@@ -121,7 +129,7 @@ export class SalesService {
     await this.notifications.sendToUser(owner.id, {
       title: '🛒 New Sale',
       body: `${sellerName} sold: ${itemsList} — Total: ${totalPrice}`,
-      data: { type: 'sale', saleId: sale.id },
+      data: { type: 'new_sale', saleId: sale.id },
     });
   }
 
