@@ -1720,7 +1720,7 @@ export const SaleScalarFieldEnum = {
   sellerId: 'sellerId',
   clientId: 'clientId',
   totalAmount: 'totalAmount',
-  discountAmount: 'discountAmount',
+  sellerProfitAmount: 'sellerProfitAmount',
   finalAmount: 'finalAmount',
   paidAmount: 'paidAmount',
   paymentStatus: 'paymentStatus',

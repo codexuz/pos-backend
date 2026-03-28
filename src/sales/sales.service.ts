@@ -21,8 +21,8 @@ export class SalesService {
     });
 
     const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const discountAmount = dto.discountAmount ?? 0;
-    const finalAmount = totalAmount - discountAmount;
+    const sellerProfitAmount = dto.sellerProfitAmount ?? 0;
+    const finalAmount = totalAmount + sellerProfitAmount;
     const paidAmount = dto.paidAmount ?? 0;
 
     let paymentStatus: 'pending' | 'partial' | 'paid' = 'pending';
@@ -53,7 +53,7 @@ export class SalesService {
           sellerId,
           clientId: dto.clientId,
           totalAmount,
-          discountAmount,
+          sellerProfitAmount,
           finalAmount,
           paidAmount,
           paymentStatus,
@@ -176,7 +176,7 @@ export class SalesService {
 
     return this.prisma.$transaction(async (tx) => {
       let totalAmount = Number(existing.totalAmount);
-      let discountAmount = dto.discountAmount ?? Number(existing.discountAmount);
+      let sellerProfitAmount = dto.sellerProfitAmount ?? Number(existing.sellerProfitAmount);
 
       // If items are being replaced
       if (dto.items) {
@@ -229,7 +229,7 @@ export class SalesService {
         totalAmount = newItems.reduce((sum, item) => sum + item.totalPrice, 0);
       }
 
-      const finalAmount = totalAmount - discountAmount;
+      const finalAmount = totalAmount + sellerProfitAmount;
 
       let paymentStatus = dto.paymentStatus;
       if (!paymentStatus) {
@@ -245,7 +245,7 @@ export class SalesService {
           ...(dto.clientId !== undefined && { clientId: dto.clientId }),
           ...(dto.notes !== undefined && { notes: dto.notes }),
           ...(dto.items && { totalAmount, finalAmount }),
-          discountAmount,
+          sellerProfitAmount,
           paymentStatus,
         },
         include: {

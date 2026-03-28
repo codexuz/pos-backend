@@ -20,14 +20,14 @@ export class ReportsService {
     const totalSales = sales.length;
     const totalAmount = sales.reduce((sum, s) => sum + Number(s.finalAmount), 0);
     const totalPaid = sales.reduce((sum, s) => sum + Number(s.paidAmount), 0);
-    const totalDiscount = sales.reduce((sum, s) => sum + Number(s.discountAmount), 0);
+    const totalSellerProfit = sales.reduce((sum, s) => sum + Number(s.sellerProfitAmount), 0);
     const totalOutstanding = totalAmount - totalPaid;
 
     return {
       totalSales,
       totalAmount: +totalAmount.toFixed(2),
       totalPaid: +totalPaid.toFixed(2),
-      totalDiscount: +totalDiscount.toFixed(2),
+      totalSellerProfit: +totalSellerProfit.toFixed(2),
       totalOutstanding: +totalOutstanding.toFixed(2),
     };
   }

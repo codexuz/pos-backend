@@ -9,12 +9,12 @@ export class UpdateSaleDto {
   @IsUUID()
   clientId?: string;
 
-  @ApiPropertyOptional({ example: 0 })
+  @ApiPropertyOptional({ example: 0, description: 'Seller profit amount added on top of total' })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
-  discountAmount?: number;
+  sellerProfitAmount?: number;
 
   @ApiPropertyOptional({ enum: ['pending', 'partial', 'paid'] })
   @IsOptional()
