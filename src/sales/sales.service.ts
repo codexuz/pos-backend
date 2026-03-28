@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateSaleDto, UpdateSaleDto } from './dto';
 
 @Injectable()
 export class SalesService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(SalesService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async create(tenantId: string, branchId: string, sellerId: string, dto: CreateSaleDto) {
     const items = dto.items.map((item) => {
@@ -37,7 +43,7 @@ export class SalesService {
       throw new NotFoundException(`Products not found: ${missingIds.join(', ')}`);
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const sale = await this.prisma.$transaction(async (tx) => {
       const sale = await tx.sale.create({
         data: {
           tenantId,
@@ -87,6 +93,35 @@ export class SalesService {
       }
 
       return sale;
+    });
+
+    // Notify tenant owner about the sale (fire-and-forget)
+    this.notifyOwnerAboutSale(tenantId, sale).catch((err) =>
+      this.logger.error('Failed to send sale notification', err),
+    );
+
+    return sale;
+  }
+
+  private async notifyOwnerAboutSale(tenantId: string, sale: any) {
+    // Find the tenant owner
+    const owner = await this.prisma.user.findFirst({
+      where: { tenantId, role: 'owner', isActive: true },
+      select: { id: true, expoPushToken: true },
+    });
+
+    if (!owner?.expoPushToken) return;
+
+    const sellerName = sale.seller?.fullName ?? 'Unknown seller';
+    const itemsList = sale.items
+      .map((item: any) => `${item.product?.name ?? 'Product'} x${item.quantity}`)
+      .join(', ');
+    const totalPrice = Number(sale.finalAmount).toLocaleString();
+
+    await this.notifications.sendToUser(owner.id, {
+      title: '🛒 New Sale',
+      body: `${sellerName} sold: ${itemsList} — Total: ${totalPrice}`,
+      data: { type: 'sale', saleId: sale.id },
     });
   }
 
