@@ -86,4 +86,14 @@ export class UsersService {
       data: { isActive: false },
     });
   }
+
+  async changeLanguage(userId: string, language: 'en' | 'uz' | 'ru') {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { language: language as any },
+      select: {
+        id: true, fullName: true, language: true,
+      },
+    });
+  }
 }

@@ -88,6 +88,8 @@ export class InventoryService {
   async checkAndNotifyLowStock(tenantId: string, productIds: string[]): Promise<void> {
     if (productIds.length === 0) return;
 
+    const { getLowStockMessage } = await import('../notifications/notification-messages');
+
     // Find inventory records where quantity <= minQuantity
     const lowStockItems = await this.prisma.inventory.findMany({
       where: {
@@ -107,23 +109,25 @@ export class InventoryService {
 
     if (alertItems.length === 0) return;
 
-    // Find tenant owner
+    // Find tenant owner with language preference
     const owner = await this.prisma.user.findFirst({
       where: { tenantId, role: 'owner', isActive: true },
-      select: { id: true, expoPushToken: true },
+      select: { id: true, expoPushToken: true, language: true },
     });
 
     if (!owner?.expoPushToken) return;
 
+    const msg = getLowStockMessage(owner.language);
+
     const itemsList = alertItems
-      .map((item) => `${item.product.name}: ${Number(item.quantity)} left`)
+      .map((item) => msg.itemFormat(item.product.name, Number(item.quantity)))
       .join('\n');
 
     await this.notifications.sendToUser(owner.id, {
-      title: '⚠️ Low Stock Alert',
+      title: msg.title,
       body: alertItems.length === 1
-        ? `${alertItems[0].product.name} is running low — only ${Number(alertItems[0].quantity)} left`
-        : `${alertItems.length} products are running low:\n${itemsList}`,
+        ? msg.single(alertItems[0].product.name, Number(alertItems[0].quantity))
+        : msg.multi(alertItems.length, itemsList),
       data: { type: 'low_stock', productIds: alertItems.map((i) => i.product.id) },
     });
   }

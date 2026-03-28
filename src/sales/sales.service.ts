@@ -112,23 +112,26 @@ export class SalesService {
   }
 
   private async notifyOwnerAboutSale(tenantId: string, sale: any) {
-    // Find the tenant owner
+    const { getSaleMessage } = await import('../notifications/notification-messages');
+
+    // Find the tenant owner with language preference
     const owner = await this.prisma.user.findFirst({
       where: { tenantId, role: 'owner', isActive: true },
-      select: { id: true, expoPushToken: true },
+      select: { id: true, expoPushToken: true, language: true },
     });
 
     if (!owner?.expoPushToken) return;
 
-    const sellerName = sale.seller?.fullName ?? 'Unknown seller';
+    const msg = getSaleMessage(owner.language);
+    const sellerName = sale.seller?.fullName ?? 'Unknown';
     const itemsList = sale.items
       .map((item: any) => `${item.product?.name ?? 'Product'} x${item.quantity}`)
       .join(', ');
     const totalPrice = Number(sale.finalAmount).toLocaleString();
 
     await this.notifications.sendToUser(owner.id, {
-      title: '🛒 New Sale',
-      body: `${sellerName} sold: ${itemsList} — Total: ${totalPrice}`,
+      title: msg.title,
+      body: msg.body(sellerName, itemsList, totalPrice),
       data: { type: 'new_sale', saleId: sale.id },
     });
   }
