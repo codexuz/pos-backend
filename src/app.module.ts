@@ -23,6 +23,7 @@ import { ReportsModule } from './reports/reports.module';
 import { DebtsModule } from './debts/debts.module';
 import { MinioModule } from './minio/minio.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { TelegramModule } from './telegram/telegram.module';
 import { JwtAuthGuard, RolesGuard, SubscriptionGuard } from './auth/guards';
 
 @Module({
@@ -48,6 +49,7 @@ import { JwtAuthGuard, RolesGuard, SubscriptionGuard } from './auth/guards';
     DebtsModule,
     MinioModule,
     NotificationsModule,
+    TelegramModule,
   ],
   controllers: [AppController],
   providers: [

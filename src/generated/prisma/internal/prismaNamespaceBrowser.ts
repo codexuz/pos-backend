@@ -65,7 +65,8 @@ export const ModelName = {
   SaleItem: 'SaleItem',
   Payment: 'Payment',
   ExpenseCategory: 'ExpenseCategory',
-  Transaction: 'Transaction'
+  Transaction: 'Transaction',
+  TelegramUser: 'TelegramUser'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -296,6 +297,21 @@ export const TransactionScalarFieldEnum = {
 } as const
 
 export type TransactionScalarFieldEnum = (typeof TransactionScalarFieldEnum)[keyof typeof TransactionScalarFieldEnum]
+
+
+export const TelegramUserScalarFieldEnum = {
+  id: 'id',
+  chatId: 'chatId',
+  userId: 'userId',
+  tenantId: 'tenantId',
+  phone: 'phone',
+  state: 'state',
+  stateData: 'stateData',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TelegramUserScalarFieldEnum = (typeof TelegramUserScalarFieldEnum)[keyof typeof TelegramUserScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -269,18 +269,18 @@ model Client {
 // ─── Sales ───────────────────────────────────────────────────────────
 
 model Sale {
-  id             String        @id @default(uuid()) @db.Uuid
-  tenantId       String        @map("tenant_id") @db.Uuid
-  branchId       String        @map("branch_id") @db.Uuid
-  sellerId       String        @map("seller_id") @db.Uuid
-  clientId       String?       @map("client_id") @db.Uuid
-  totalAmount    Decimal       @default(0) @map("total_amount") @db.Decimal(12, 2)
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenantId           String        @map("tenant_id") @db.Uuid
+  branchId           String        @map("branch_id") @db.Uuid
+  sellerId           String        @map("seller_id") @db.Uuid
+  clientId           String?       @map("client_id") @db.Uuid
+  totalAmount        Decimal       @default(0) @map("total_amount") @db.Decimal(12, 2)
   sellerProfitAmount Decimal       @default(0) @map("seller_profit_amount") @db.Decimal(12, 2)
-  finalAmount    Decimal       @default(0) @map("final_amount") @db.Decimal(12, 2)
-  paidAmount     Decimal       @default(0) @map("paid_amount") @db.Decimal(12, 2)
-  paymentStatus  PaymentStatus @default(pending) @map("payment_status")
-  notes          String?
-  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  finalAmount        Decimal       @default(0) @map("final_amount") @db.Decimal(12, 2)
+  paidAmount         Decimal       @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  paymentStatus      PaymentStatus @default(pending) @map("payment_status")
+  notes              String?
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
   tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch   Branch     @relation(fields: [branchId], references: [id])
@@ -358,4 +358,20 @@ model Transaction {
   expenseCategory ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id])
 
   @@map("transactions")
+}
+
+// ─── Telegram Users ──────────────────────────────────────────────────
+
+model TelegramUser {
+  id        String   @id @default(uuid()) @db.Uuid
+  chatId    String   @unique @map("chat_id")
+  userId    String?  @map("user_id") @db.Uuid
+  tenantId  String?  @map("tenant_id") @db.Uuid
+  phone     String?
+  state     String?  @default("idle")
+  stateData Json?    @map("state_data")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("telegram_users")
 }

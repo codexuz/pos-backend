@@ -92,3 +92,8 @@ export type ExpenseCategory = Prisma.ExpenseCategoryModel
  * 
  */
 export type Transaction = Prisma.TransactionModel
+/**
+ * Model TelegramUser
+ * 
+ */
+export type TelegramUser = Prisma.TelegramUserModel
