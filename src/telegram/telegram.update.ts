@@ -28,7 +28,7 @@ export class TelegramUpdate {
     return this.svc.getLanguage(this.chatId(ctx));
   }
 
-  private async auth(ctx: TgContext): Promise<{ userId: string; tenantId: string } | null> {
+  private async auth(ctx: TgContext): Promise<{ userId: string; tenantId: string; role: string } | null> {
     const chatId = this.chatId(ctx);
     const tg = await this.svc.getTelegramUser(chatId);
     if (!tg?.userId || !tg?.tenantId) {
@@ -36,7 +36,24 @@ export class TelegramUpdate {
       await this.send(ctx, i18n('not_logged_in', l));
       return null;
     }
-    return { userId: tg.userId, tenantId: tg.tenantId };
+    const role = await this.svc.getUserRole(chatId) ?? 'seller';
+    return { userId: tg.userId, tenantId: tg.tenantId, role };
+  }
+
+  private isAdmin(role: string): boolean {
+    return role === 'owner' || role === 'super_admin';
+  }
+
+  /** Block sellers from admin-only commands */
+  private async adminOnly(ctx: TgContext): Promise<{ userId: string; tenantId: string; role: string } | null> {
+    const a = await this.auth(ctx);
+    if (!a) return null;
+    if (!this.isAdmin(a.role)) {
+      const l = await this.lang(ctx);
+      await this.send(ctx, i18n('not_found', l));
+      return null;
+    }
+    return a;
   }
 
   /** Delete previous bot message + triggering message, send new one, track its id */
@@ -63,15 +80,22 @@ export class TelegramUpdate {
     return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
   }
 
-  private mainMenu(l: Lang) {
-    return Markup.keyboard([
-      [i18n('btn_dashboard', l), i18n('btn_pos', l)],
-      [i18n('btn_products', l), i18n('btn_inventory', l)],
-      [i18n('btn_clients', l), i18n('btn_sales', l)],
-      [i18n('btn_branches', l), i18n('btn_categories', l)],
-      [i18n('btn_transactions', l), i18n('btn_debts', l)],
-      [i18n('btn_settings', l), i18n('btn_help', l)],
-    ]).resize();
+  private mainMenu(l: Lang, role = 'seller') {
+    const rows: string[][] = [];
+    if (this.isAdmin(role)) {
+      rows.push([i18n('btn_dashboard', l), i18n('btn_pos', l)]);
+      rows.push([i18n('btn_products', l), i18n('btn_inventory', l)]);
+      rows.push([i18n('btn_clients', l), i18n('btn_sales', l)]);
+      rows.push([i18n('btn_branches', l), i18n('btn_categories', l)]);
+      rows.push([i18n('btn_transactions', l), i18n('btn_debts', l)]);
+    } else {
+      // Seller: POS, products, inventory, clients, sales
+      rows.push([i18n('btn_pos', l), i18n('btn_products', l)]);
+      rows.push([i18n('btn_inventory', l), i18n('btn_clients', l)]);
+      rows.push([i18n('btn_sales', l), i18n('btn_categories', l)]);
+    }
+    rows.push([i18n('btn_settings', l), i18n('btn_help', l)]);
+    return Markup.keyboard(rows).resize();
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -85,7 +109,8 @@ export class TelegramUpdate {
     const l = await this.lang(ctx);
 
     if (await this.svc.isAuthenticated(chatId)) {
-      await this.send(ctx, i18n('welcome_auth', l), this.mainMenu(l));
+      const role = await this.svc.getUserRole(chatId) ?? 'seller';
+      await this.send(ctx, i18n('welcome_auth', l), this.mainMenu(l, role));
     } else {
       await this.send(ctx, i18n('welcome_new', l));
     }
@@ -122,7 +147,8 @@ export class TelegramUpdate {
     const chatId = this.chatId(ctx);
     await this.svc.setLanguage(chatId, lang);
     const isAuth = await this.svc.isAuthenticated(chatId);
-    await this.send(ctx, i18n('language_set', lang), isAuth ? this.mainMenu(lang) : undefined);
+    const role = isAuth ? (await this.svc.getUserRole(chatId) ?? 'seller') : 'seller';
+    await this.send(ctx, i18n('language_set', lang), isAuth ? this.mainMenu(lang, role) : undefined);
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -171,11 +197,12 @@ export class TelegramUpdate {
       await this.send(ctx, i18n('login_failed', l), Markup.removeKeyboard());
       return;
     }
+    const role = (user as any).role ?? 'seller';
     await this.send(ctx, i18n('login_success', l, {
       name: this.esc(user.fullName),
       tenant: this.esc((user as any).tenant?.name ?? '—'),
       phone: user.phone ?? '',
-    }), this.mainMenu(l));
+    }), this.mainMenu(l, role));
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -211,7 +238,7 @@ export class TelegramUpdate {
   @Action('go_dashboard')
   async onDashboard(@Ctx() ctx: TgContext) {
     if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const a = await this.auth(ctx);
+    const a = await this.adminOnly(ctx);
     if (!a) return;
     const l = await this.lang(ctx);
     const { salesSummary, financialSummary, debtSummary } = await this.svc.getDashboard(a.tenantId);
@@ -310,7 +337,7 @@ export class TelegramUpdate {
   @Action('cmd_financial')
   async onFinancial(@Ctx() ctx: TgContext) {
     if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const a = await this.auth(ctx); if (!a) return;
+    const a = await this.adminOnly(ctx); if (!a) return;
     const l = await this.lang(ctx);
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const s = await this.svc.getFinancialSummary(a.tenantId, today.toISOString());
@@ -406,23 +433,28 @@ export class TelegramUpdate {
     const a = await this.auth(ctx); if (!a) return;
     const l = await this.lang(ctx);
     const products = await this.svc.getProducts(a.tenantId);
+    const admin = this.isAdmin(a.role);
     if (!products.length) {
-      await this.send(ctx, i18n('products_empty', l), Markup.inlineKeyboard([
-        [Markup.button.callback(i18n('add', l), 'product_add')],
-        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
-      ]));
+      const emptyBtns: any[][] = [];
+      if (admin) emptyBtns.push([Markup.button.callback(i18n('add', l), 'product_add')]);
+      emptyBtns.push([Markup.button.callback(i18n('back', l), 'go_dashboard')]);
+      await this.send(ctx, i18n('products_empty', l), Markup.inlineKeyboard(emptyBtns));
       return;
     }
     const list = products.slice(0, 20).map((p, i) =>
       `${i + 1}. *${this.esc(p.name)}* — ${this.fmt(Number(p.sellingPrice))}`,
     );
-    const btns = products.slice(0, 20).map(p =>
-      [Markup.button.callback(`📦 ${p.name.substring(0, 30)}`, `pv:${p.id}`)],
-    );
-    btns.push([
-      Markup.button.callback(i18n('add', l), 'product_add'),
-      Markup.button.callback(i18n('search', l), 'product_search'),
-    ]);
+    const btns: any[][] = admin
+      ? products.slice(0, 20).map(p => [Markup.button.callback(`📦 ${p.name.substring(0, 30)}`, `pv:${p.id}`)])
+      : [];
+    if (admin) {
+      btns.push([
+        Markup.button.callback(i18n('add', l), 'product_add'),
+        Markup.button.callback(i18n('search', l), 'product_search'),
+      ]);
+    } else {
+      btns.push([Markup.button.callback(i18n('search', l), 'product_search')]);
+    }
     btns.push([Markup.button.callback(i18n('back', l), 'go_dashboard')]);
     await this.send(ctx, `${i18n('products_title', l)}\n\n${list.join('\n')}`, Markup.inlineKeyboard(btns));
   }
@@ -430,7 +462,7 @@ export class TelegramUpdate {
   @Action(/^pv:(.+)$/)
   async onProductView(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
-    const a = await this.auth(ctx); if (!a) return;
+    const a = await this.adminOnly(ctx); if (!a) return;
     const l = await this.lang(ctx);
     try {
       const p = await this.svc.getProduct(a.tenantId, ctx.match![1]);
@@ -457,7 +489,7 @@ export class TelegramUpdate {
   @Action('product_add')
   async onProductAdd(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
-    const a = await this.auth(ctx); if (!a) return;
+    const a = await this.adminOnly(ctx); if (!a) return;
     const l = await this.lang(ctx);
     await this.svc.setState(this.chatId(ctx), 'product_name', {});
     await this.send(ctx, i18n('enter_name', l));
@@ -467,6 +499,7 @@ export class TelegramUpdate {
   @Action(/^pe:(.+)$/)
   async onProductEdit(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
+    const a = await this.adminOnly(ctx); if (!a) return;
     const l = await this.lang(ctx);
     const id = ctx.match![1];
     await this.send(ctx, `${i18n('edit', l)} — ${i18n('select_action', l)}`, Markup.inlineKeyboard([
@@ -480,6 +513,7 @@ export class TelegramUpdate {
   @Action(/^pef:(.+):(.+)$/)
   async onProductEditField(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
+    const a = await this.adminOnly(ctx); if (!a) return;
     const l = await this.lang(ctx);
     const [id, field] = [ctx.match![1], ctx.match![2]];
     await this.svc.setState(this.chatId(ctx), 'product_edit', { entityId: id, field });
@@ -491,6 +525,7 @@ export class TelegramUpdate {
   @Action(/^pd:(.+)$/)
   async onProductDelete(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
+    const a = await this.adminOnly(ctx); if (!a) return;
     const l = await this.lang(ctx);
     await this.send(ctx, i18n('confirm_delete', l), Markup.inlineKeyboard([
       [
@@ -503,7 +538,7 @@ export class TelegramUpdate {
   @Action(/^pdc:(.+)$/)
   async onProductDeleteConfirm(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
-    const a = await this.auth(ctx); if (!a) return;
+    const a = await this.adminOnly(ctx); if (!a) return;
     const l = await this.lang(ctx);
     try {
       await this.svc.deleteProduct(a.tenantId, ctx.match![1]);
@@ -978,7 +1013,7 @@ export class TelegramUpdate {
   @Action('cmd_transactions')
   async onTransactions(@Ctx() ctx: TgContext) {
     if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const a = await this.auth(ctx); if (!a) return;
+    const a = await this.adminOnly(ctx); if (!a) return;
     const l = await this.lang(ctx);
     const txns = await this.svc.getTransactions(a.tenantId);
     if (!txns.length) {
@@ -1076,7 +1111,7 @@ export class TelegramUpdate {
   @Action('cmd_debts')
   async onDebts(@Ctx() ctx: TgContext) {
     if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const a = await this.auth(ctx); if (!a) return;
+    const a = await this.adminOnly(ctx); if (!a) return;
     const l = await this.lang(ctx);
     const s = await this.svc.getDebtSummary(a.tenantId);
     await this.send(ctx,
@@ -1267,9 +1302,11 @@ export class TelegramUpdate {
   @Action('pos_cancel')
   async onPosCancel(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
-    await this.svc.setState(this.chatId(ctx), 'idle');
+    const chatId = this.chatId(ctx);
+    await this.svc.setState(chatId, 'idle');
     const l = await this.lang(ctx);
-    await this.send(ctx, i18n('cancelled', l), this.mainMenu(l));
+    const role = await this.svc.getUserRole(chatId) ?? 'seller';
+    await this.send(ctx, i18n('cancelled', l), this.mainMenu(l, role));
   }
 
   @Action('pos_checkout')
@@ -1344,7 +1381,8 @@ export class TelegramUpdate {
     // ─── Cancel anywhere ────────────────────────────────────────────
     if (text === i18n('cancel', l) || text === '/cancel') {
       await this.svc.setState(chatId, 'idle');
-      await this.send(ctx, i18n('cancelled', l), this.mainMenu(l));
+      const role = await this.svc.getUserRole(chatId) ?? 'seller';
+      await this.send(ctx, i18n('cancelled', l), this.mainMenu(l, role));
       return;
     }
 
@@ -1650,7 +1688,8 @@ export class TelegramUpdate {
           }) as any;
           await this.svc.setState(chatId, 'idle');
           const total = data.total || saleItems.reduce((s: number, it: any) => s + it.quantity * it.unitPrice, 0);
-          await this.send(ctx, i18n('pos_sale_created', l, { total: this.fmt(total) }), this.mainMenu(l));
+          const role12 = a12.role;
+          await this.send(ctx, i18n('pos_sale_created', l, { total: this.fmt(total) }), this.mainMenu(l, role12));
         } catch (e) {
           this.logger.error('POS sale error', e);
           await this.send(ctx, i18n('error', l));

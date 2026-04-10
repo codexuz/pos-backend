@@ -99,6 +99,13 @@ export class TelegramService {
     return !!(tgUser?.userId && tgUser?.tenantId);
   }
 
+  async getUserRole(chatId: string): Promise<string | null> {
+    const tgUser = await this.getTelegramUser(chatId);
+    if (!tgUser?.userId) return null;
+    const user = await this.prisma.user.findUnique({ where: { id: tgUser.userId }, select: { role: true } });
+    return user?.role ?? null;
+  }
+
   async logout(chatId: string) {
     await this.prisma.telegramUser.update({
       where: { chatId },
