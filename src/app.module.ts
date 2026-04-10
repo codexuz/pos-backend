@@ -47,7 +47,7 @@ import { JwtAuthGuard, RolesGuard, SubscriptionGuard } from './auth/guards';
     TransactionsModule,
     ReportsModule,
     DebtsModule,
-   // MinioModule,
+    MinioModule,
     NotificationsModule,
     TelegramModule,
   ],
