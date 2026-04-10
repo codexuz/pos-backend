@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -24,7 +24,7 @@ import { DebtsModule } from './debts/debts.module';
 import { MinioModule } from './minio/minio.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TelegramModule } from './telegram/telegram.module';
-import { JwtAuthGuard, RolesGuard, SubscriptionGuard } from './auth/guards';
+import { JwtAuthGuard, RolesGuard, SubscriptionGuard, CustomThrottlerGuard } from './auth/guards';
 
 @Module({
   imports: [
@@ -57,7 +57,7 @@ import { JwtAuthGuard, RolesGuard, SubscriptionGuard } from './auth/guards';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: SubscriptionGuard },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: CustomThrottlerGuard },
   ],
 })
 export class AppModule {}
