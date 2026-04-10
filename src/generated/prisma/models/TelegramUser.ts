@@ -30,6 +30,7 @@ export type TelegramUserMinAggregateOutputType = {
   userId: string | null
   tenantId: string | null
   phone: string | null
+  language: $Enums.Language | null
   state: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -41,6 +42,7 @@ export type TelegramUserMaxAggregateOutputType = {
   userId: string | null
   tenantId: string | null
   phone: string | null
+  language: $Enums.Language | null
   state: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -52,6 +54,7 @@ export type TelegramUserCountAggregateOutputType = {
   userId: number
   tenantId: number
   phone: number
+  language: number
   state: number
   stateData: number
   createdAt: number
@@ -66,6 +69,7 @@ export type TelegramUserMinAggregateInputType = {
   userId?: true
   tenantId?: true
   phone?: true
+  language?: true
   state?: true
   createdAt?: true
   updatedAt?: true
@@ -77,6 +81,7 @@ export type TelegramUserMaxAggregateInputType = {
   userId?: true
   tenantId?: true
   phone?: true
+  language?: true
   state?: true
   createdAt?: true
   updatedAt?: true
@@ -88,6 +93,7 @@ export type TelegramUserCountAggregateInputType = {
   userId?: true
   tenantId?: true
   phone?: true
+  language?: true
   state?: true
   stateData?: true
   createdAt?: true
@@ -173,6 +179,7 @@ export type TelegramUserGroupByOutputType = {
   userId: string | null
   tenantId: string | null
   phone: string | null
+  language: $Enums.Language
   state: string | null
   stateData: runtime.JsonValue | null
   createdAt: Date
@@ -206,6 +213,7 @@ export type TelegramUserWhereInput = {
   userId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
   tenantId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
   phone?: Prisma.StringNullableFilter<"TelegramUser"> | string | null
+  language?: Prisma.EnumLanguageFilter<"TelegramUser"> | $Enums.Language
   state?: Prisma.StringNullableFilter<"TelegramUser"> | string | null
   stateData?: Prisma.JsonNullableFilter<"TelegramUser">
   createdAt?: Prisma.DateTimeFilter<"TelegramUser"> | Date | string
@@ -218,6 +226,7 @@ export type TelegramUserOrderByWithRelationInput = {
   userId?: Prisma.SortOrderInput | Prisma.SortOrder
   tenantId?: Prisma.SortOrderInput | Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  language?: Prisma.SortOrder
   state?: Prisma.SortOrderInput | Prisma.SortOrder
   stateData?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -233,6 +242,7 @@ export type TelegramUserWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
   tenantId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
   phone?: Prisma.StringNullableFilter<"TelegramUser"> | string | null
+  language?: Prisma.EnumLanguageFilter<"TelegramUser"> | $Enums.Language
   state?: Prisma.StringNullableFilter<"TelegramUser"> | string | null
   stateData?: Prisma.JsonNullableFilter<"TelegramUser">
   createdAt?: Prisma.DateTimeFilter<"TelegramUser"> | Date | string
@@ -245,6 +255,7 @@ export type TelegramUserOrderByWithAggregationInput = {
   userId?: Prisma.SortOrderInput | Prisma.SortOrder
   tenantId?: Prisma.SortOrderInput | Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  language?: Prisma.SortOrder
   state?: Prisma.SortOrderInput | Prisma.SortOrder
   stateData?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -263,6 +274,7 @@ export type TelegramUserScalarWhereWithAggregatesInput = {
   userId?: Prisma.UuidNullableWithAggregatesFilter<"TelegramUser"> | string | null
   tenantId?: Prisma.UuidNullableWithAggregatesFilter<"TelegramUser"> | string | null
   phone?: Prisma.StringNullableWithAggregatesFilter<"TelegramUser"> | string | null
+  language?: Prisma.EnumLanguageWithAggregatesFilter<"TelegramUser"> | $Enums.Language
   state?: Prisma.StringNullableWithAggregatesFilter<"TelegramUser"> | string | null
   stateData?: Prisma.JsonNullableWithAggregatesFilter<"TelegramUser">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"TelegramUser"> | Date | string
@@ -275,6 +287,7 @@ export type TelegramUserCreateInput = {
   userId?: string | null
   tenantId?: string | null
   phone?: string | null
+  language?: $Enums.Language
   state?: string | null
   stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -287,6 +300,7 @@ export type TelegramUserUncheckedCreateInput = {
   userId?: string | null
   tenantId?: string | null
   phone?: string | null
+  language?: $Enums.Language
   state?: string | null
   stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -299,6 +313,7 @@ export type TelegramUserUpdateInput = {
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
   state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -311,6 +326,7 @@ export type TelegramUserUncheckedUpdateInput = {
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
   state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -323,6 +339,7 @@ export type TelegramUserCreateManyInput = {
   userId?: string | null
   tenantId?: string | null
   phone?: string | null
+  language?: $Enums.Language
   state?: string | null
   stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -335,6 +352,7 @@ export type TelegramUserUpdateManyMutationInput = {
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
   state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -347,6 +365,7 @@ export type TelegramUserUncheckedUpdateManyInput = {
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
   state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -359,6 +378,7 @@ export type TelegramUserCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   tenantId?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  language?: Prisma.SortOrder
   state?: Prisma.SortOrder
   stateData?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -371,6 +391,7 @@ export type TelegramUserMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   tenantId?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  language?: Prisma.SortOrder
   state?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -382,6 +403,7 @@ export type TelegramUserMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   tenantId?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  language?: Prisma.SortOrder
   state?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -395,6 +417,7 @@ export type TelegramUserSelect<ExtArgs extends runtime.Types.Extensions.Internal
   userId?: boolean
   tenantId?: boolean
   phone?: boolean
+  language?: boolean
   state?: boolean
   stateData?: boolean
   createdAt?: boolean
@@ -407,6 +430,7 @@ export type TelegramUserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   userId?: boolean
   tenantId?: boolean
   phone?: boolean
+  language?: boolean
   state?: boolean
   stateData?: boolean
   createdAt?: boolean
@@ -419,6 +443,7 @@ export type TelegramUserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   userId?: boolean
   tenantId?: boolean
   phone?: boolean
+  language?: boolean
   state?: boolean
   stateData?: boolean
   createdAt?: boolean
@@ -431,13 +456,14 @@ export type TelegramUserSelectScalar = {
   userId?: boolean
   tenantId?: boolean
   phone?: boolean
+  language?: boolean
   state?: boolean
   stateData?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type TelegramUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "chatId" | "userId" | "tenantId" | "phone" | "state" | "stateData" | "createdAt" | "updatedAt", ExtArgs["result"]["telegramUser"]>
+export type TelegramUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "chatId" | "userId" | "tenantId" | "phone" | "language" | "state" | "stateData" | "createdAt" | "updatedAt", ExtArgs["result"]["telegramUser"]>
 
 export type $TelegramUserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "TelegramUser"
@@ -448,6 +474,7 @@ export type $TelegramUserPayload<ExtArgs extends runtime.Types.Extensions.Intern
     userId: string | null
     tenantId: string | null
     phone: string | null
+    language: $Enums.Language
     state: string | null
     stateData: runtime.JsonValue | null
     createdAt: Date
@@ -880,6 +907,7 @@ export interface TelegramUserFieldRefs {
   readonly userId: Prisma.FieldRef<"TelegramUser", 'String'>
   readonly tenantId: Prisma.FieldRef<"TelegramUser", 'String'>
   readonly phone: Prisma.FieldRef<"TelegramUser", 'String'>
+  readonly language: Prisma.FieldRef<"TelegramUser", 'Language'>
   readonly state: Prisma.FieldRef<"TelegramUser", 'String'>
   readonly stateData: Prisma.FieldRef<"TelegramUser", 'Json'>
   readonly createdAt: Prisma.FieldRef<"TelegramUser", 'DateTime'>

@@ -368,6 +368,7 @@ model TelegramUser {
   userId    String?  @map("user_id") @db.Uuid
   tenantId  String?  @map("tenant_id") @db.Uuid
   phone     String?
+  language  Language @default(en)
   state     String?  @default("idle")
   stateData Json?    @map("state_data")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz

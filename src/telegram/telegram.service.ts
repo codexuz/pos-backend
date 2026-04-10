@@ -9,6 +9,7 @@ import { DebtsService } from '../debts/debts.service';
 import { BranchesService } from '../branches/branches.service';
 import { CategoriesService } from '../categories/categories.service';
 import { TransactionsService } from '../transactions/transactions.service';
+import { Lang } from './telegram.i18n';
 
 @Injectable()
 export class TelegramService {
@@ -48,14 +49,31 @@ export class TelegramService {
     });
   }
 
+  async getLanguage(chatId: string): Promise<Lang> {
+    const tgUser = await this.getTelegramUser(chatId);
+    return (tgUser?.language as Lang) ?? 'en';
+  }
+
+  async setLanguage(chatId: string, lang: Lang) {
+    await this.prisma.telegramUser.update({
+      where: { chatId },
+      data: { language: lang as any },
+    });
+  }
+
   async linkUserByPhone(chatId: string, phone: string) {
-    const normalizedPhone = phone.replace(/[^0-9+]/g, '');
+    const digitsOnly = phone.replace(/[^0-9]/g, '');
+    const variants = [
+      phone.replace(/[^0-9+]/g, ''),
+      `+${digitsOnly}`,
+      digitsOnly,
+      digitsOnly.replace(/^998/, ''),
+    ];
 
     const user = await this.prisma.user.findFirst({
       where: {
-        phone: normalizedPhone,
+        phone: { in: [...new Set(variants)] },
         isActive: true,
-        role: { in: ['owner', 'super_admin'] },
       },
       include: { tenant: true },
     });
@@ -67,7 +85,7 @@ export class TelegramService {
       data: {
         userId: user.id,
         tenantId: user.tenantId,
-        phone: normalizedPhone,
+        phone: user.phone,
         state: 'idle',
         stateData: null,
       },
@@ -120,7 +138,7 @@ export class TelegramService {
     return this.reportsService.topSellers(tenantId);
   }
 
-  // ─── Products ─────────────────────────────────────────────────────
+  // ─── Products (CRUD) ─────────────────────────────────────────────
 
   async getProducts(tenantId: string, search?: string) {
     return this.productsService.findAll(tenantId, search);
@@ -128,6 +146,137 @@ export class TelegramService {
 
   async getProduct(tenantId: string, productId: string) {
     return this.productsService.findOne(productId, tenantId);
+  }
+
+  async createProduct(tenantId: string, data: { name: string; sellingPrice: number; costPrice?: number; categoryId?: string }) {
+    return this.productsService.create(tenantId, {
+      name: data.name,
+      sellingPrice: data.sellingPrice,
+      costPrice: data.costPrice,
+      categoryId: data.categoryId,
+    } as any);
+  }
+
+  async updateProduct(tenantId: string, productId: string, data: Record<string, any>) {
+    return this.productsService.update(productId, tenantId, data as any);
+  }
+
+  async deleteProduct(tenantId: string, productId: string) {
+    return this.productsService.remove(productId, tenantId);
+  }
+
+  // ─── Clients (CRUD) ──────────────────────────────────────────────
+
+  async getClients(tenantId: string, search?: string) {
+    return this.clientsService.findAll(tenantId, search);
+  }
+
+  async getClient(tenantId: string, clientId: string) {
+    return this.clientsService.findOne(tenantId, clientId);
+  }
+
+  async createClient(tenantId: string, data: { fullName: string; phone?: string; address?: string; notes?: string }) {
+    return this.clientsService.create(tenantId, data as any);
+  }
+
+  async updateClient(tenantId: string, clientId: string, data: Record<string, any>) {
+    return this.clientsService.update(tenantId, clientId, data as any);
+  }
+
+  async deleteClient(tenantId: string, clientId: string) {
+    return this.clientsService.remove(tenantId, clientId);
+  }
+
+  // ─── Branches (CRUD) ─────────────────────────────────────────────
+
+  async getBranches(tenantId: string) {
+    return this.branchesService.findAll(tenantId);
+  }
+
+  async getBranch(tenantId: string, branchId: string) {
+    return this.branchesService.findOne(branchId, tenantId);
+  }
+
+  async createBranch(tenantId: string, data: { name: string; address?: string; phone?: string }) {
+    return this.branchesService.create(tenantId, data as any);
+  }
+
+  async updateBranch(tenantId: string, branchId: string, data: Record<string, any>) {
+    return this.branchesService.update(branchId, tenantId, data as any);
+  }
+
+  async deleteBranch(tenantId: string, branchId: string) {
+    return this.branchesService.remove(branchId, tenantId);
+  }
+
+  // ─── Categories (CRUD) ───────────────────────────────────────────
+
+  async getCategories(tenantId: string) {
+    return this.categoriesService.findAll(tenantId);
+  }
+
+  async getCategory(tenantId: string, categoryId: string) {
+    return this.categoriesService.findOne(categoryId, tenantId);
+  }
+
+  async createCategory(tenantId: string, data: { name: string; description?: string }) {
+    return this.categoriesService.create(tenantId, data as any);
+  }
+
+  async updateCategory(tenantId: string, categoryId: string, data: Record<string, any>) {
+    return this.categoriesService.update(categoryId, tenantId, data as any);
+  }
+
+  async deleteCategory(tenantId: string, categoryId: string) {
+    return this.categoriesService.remove(categoryId, tenantId);
+  }
+
+  // ─── Inventory (CRUD) ────────────────────────────────────────────
+
+  async getInventory(tenantId: string) {
+    return this.inventoryService.findAll(tenantId);
+  }
+
+  async getInventoryItem(id: string) {
+    return this.inventoryService.findOne(id);
+  }
+
+  async getLowStock(tenantId: string) {
+    return this.inventoryService.findLowStock(tenantId) as Promise<any[]>;
+  }
+
+  async createInventory(tenantId: string, data: { productId: string; quantity: number; minQuantity?: number }) {
+    return this.inventoryService.create(tenantId, data as any);
+  }
+
+  async updateInventory(id: string, data: { quantity?: number; minQuantity?: number }) {
+    return this.inventoryService.update(id, data as any);
+  }
+
+  async deleteInventory(id: string) {
+    return this.inventoryService.remove(id);
+  }
+
+  // ─── Transactions (CRUD) ─────────────────────────────────────────
+
+  async getTransactions(tenantId: string, type?: string) {
+    return this.transactionsService.findAll(tenantId, undefined, type);
+  }
+
+  async getTransaction(tenantId: string, transactionId: string) {
+    return this.transactionsService.findOne(transactionId, tenantId);
+  }
+
+  async createTransaction(tenantId: string, userId: string, data: { branchId: string; type: string; amount: number; description?: string }) {
+    return this.transactionsService.create(tenantId, userId, data as any);
+  }
+
+  async updateTransaction(tenantId: string, transactionId: string, data: Record<string, any>) {
+    return this.transactionsService.update(transactionId, tenantId, data as any);
+  }
+
+  async deleteTransaction(tenantId: string, transactionId: string) {
+    return this.transactionsService.remove(transactionId, tenantId);
   }
 
   // ─── Sales ────────────────────────────────────────────────────────
@@ -141,24 +290,24 @@ export class TelegramService {
     return this.salesService.findOne(tenantId, saleId);
   }
 
-  // ─── Inventory ────────────────────────────────────────────────────
-
-  async getInventory(tenantId: string) {
-    return this.inventoryService.findAll(tenantId);
+  async createSale(tenantId: string, branchId: string, sellerId: string, data: {
+    items: { productId: string; quantity: number; unitPrice: number }[];
+    clientId?: string;
+    paymentMethod?: string;
+    paidAmount?: number;
+    notes?: string;
+  }) {
+    return this.salesService.create(tenantId, branchId, sellerId, {
+      branchId,
+      items: data.items,
+      clientId: data.clientId,
+      paymentMethod: data.paymentMethod as any,
+      paidAmount: data.paidAmount,
+      notes: data.notes,
+    } as any);
   }
 
-  async getLowStock(tenantId: string) {
-    const result = await this.inventoryService.findLowStock(tenantId);
-    return result as any[];
-  }
-
-  // ─── Clients ──────────────────────────────────────────────────────
-
-  async getClients(tenantId: string, search?: string) {
-    return this.clientsService.findAll(tenantId, search);
-  }
-
-  // ─── Debts ────────────────────────────────────────────────────────
+  // ─── Debts (Read-only) ───────────────────────────────────────────
 
   async getDebtSummary(tenantId: string) {
     return this.debtsService.summary(tenantId);
@@ -170,23 +319,5 @@ export class TelegramService {
 
   async getClientBalances(tenantId: string) {
     return this.debtsService.clientBalances(tenantId);
-  }
-
-  // ─── Branches ─────────────────────────────────────────────────────
-
-  async getBranches(tenantId: string) {
-    return this.branchesService.findAll(tenantId);
-  }
-
-  // ─── Categories ───────────────────────────────────────────────────
-
-  async getCategories(tenantId: string) {
-    return this.categoriesService.findAll(tenantId);
-  }
-
-  // ─── Transactions ─────────────────────────────────────────────────
-
-  async getTransactions(tenantId: string, type?: string) {
-    return this.transactionsService.findAll(tenantId, undefined, type);
   }
 }

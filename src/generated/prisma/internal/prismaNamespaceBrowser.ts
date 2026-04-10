@@ -305,6 +305,7 @@ export const TelegramUserScalarFieldEnum = {
   userId: 'userId',
   tenantId: 'tenantId',
   phone: 'phone',
+  language: 'language',
   state: 'state',
   stateData: 'stateData',
   createdAt: 'createdAt',

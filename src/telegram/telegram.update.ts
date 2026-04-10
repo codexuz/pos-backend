@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { Update, Ctx, Start, Help, Command, On, Action } from 'nestjs-telegraf';
 import { Context, Markup } from 'telegraf';
 import { TelegramService } from './telegram.service';
+import { i18n, Lang } from './telegram.i18n';
 
 interface TgContext extends Context {
   match?: RegExpExecArray;
@@ -10,782 +11,1674 @@ interface TgContext extends Context {
 @Update()
 export class TelegramUpdate {
   private readonly logger = new Logger(TelegramUpdate.name);
+  /** Track last bot-sent message per chat so we can delete before sending a new one */
+  private lastMsg = new Map<string, number>();
 
-  constructor(private readonly telegramService: TelegramService) {}
+  constructor(private readonly svc: TelegramService) {}
 
-  // ─── Helpers ──────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // HELPERS
+  // ══════════════════════════════════════════════════════════════════
 
-  private getChatId(ctx: TgContext): string {
+  private chatId(ctx: TgContext): string {
     return String(ctx.chat?.id ?? ctx.from?.id);
   }
 
-  private async requireAuth(ctx: TgContext): Promise<{ userId: string; tenantId: string } | null> {
-    const chatId = this.getChatId(ctx);
-    const tgUser = await this.telegramService.getTelegramUser(chatId);
+  private async lang(ctx: TgContext): Promise<Lang> {
+    return this.svc.getLanguage(this.chatId(ctx));
+  }
 
-    if (!tgUser?.userId || !tgUser?.tenantId) {
-      await ctx.reply(
-        '🔒 You are not logged in. Please use /login to authenticate first.',
-      );
+  private async auth(ctx: TgContext): Promise<{ userId: string; tenantId: string } | null> {
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    if (!tg?.userId || !tg?.tenantId) {
+      const l = await this.lang(ctx);
+      await this.send(ctx, i18n('not_logged_in', l));
       return null;
     }
-
-    return { userId: tgUser.userId, tenantId: tgUser.tenantId };
+    return { userId: tg.userId, tenantId: tg.tenantId };
   }
 
-  private formatCurrency(amount: number): string {
-    return amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  /** Delete previous bot message + triggering message, send new one, track its id */
+  private async send(ctx: TgContext, text: string, extra?: any) {
+    const chatId = this.chatId(ctx);
+    // Delete old bot message
+    const prevId = this.lastMsg.get(chatId);
+    if (prevId) {
+      try { await ctx.telegram.deleteMessage(Number(chatId), prevId); } catch {}
+    }
+    // Delete triggering message (user text / contact / callback message)
+    try { await ctx.deleteMessage(); } catch {}
+    const sent = await ctx.reply(text, { parse_mode: 'Markdown' as const, ...extra });
+    this.lastMsg.set(chatId, sent.message_id);
+    return sent;
   }
 
-  // ─── /start ───────────────────────────────────────────────────────
+  private fmt(n: number): string {
+    return Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  private esc(text: string): string {
+    if (!text) return '';
+    return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
+  }
+
+  private mainMenu(l: Lang) {
+    return Markup.keyboard([
+      [i18n('btn_dashboard', l), i18n('btn_pos', l)],
+      [i18n('btn_products', l), i18n('btn_inventory', l)],
+      [i18n('btn_clients', l), i18n('btn_sales', l)],
+      [i18n('btn_branches', l), i18n('btn_categories', l)],
+      [i18n('btn_transactions', l), i18n('btn_debts', l)],
+      [i18n('btn_settings', l), i18n('btn_help', l)],
+    ]).resize();
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // /start
+  // ══════════════════════════════════════════════════════════════════
 
   @Start()
   async onStart(@Ctx() ctx: TgContext) {
-    const chatId = this.getChatId(ctx);
-    await this.telegramService.findOrCreateTelegramUser(chatId);
+    const chatId = this.chatId(ctx);
+    await this.svc.findOrCreateTelegramUser(chatId);
+    const l = await this.lang(ctx);
 
-    const isAuth = await this.telegramService.isAuthenticated(chatId);
-
-    if (isAuth) {
-      await ctx.reply(
-        '👋 Welcome back! Use the menu below to manage your POS system.',
-        this.mainMenuKeyboard(),
-      );
+    if (await this.svc.isAuthenticated(chatId)) {
+      await this.send(ctx, i18n('welcome_auth', l), this.mainMenu(l));
     } else {
-      await ctx.reply(
-        '👋 Welcome to POS Management Bot!\n\n' +
-        'This bot lets you manage your Point of Sale system directly from Telegram.\n\n' +
-        '🔐 Please log in with your phone number to get started.\n' +
-        'Use /login to authenticate.',
-      );
+      await this.send(ctx, i18n('welcome_new', l));
     }
   }
 
-  // ─── /help ────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // /help
+  // ══════════════════════════════════════════════════════════════════
 
   @Help()
   async onHelp(@Ctx() ctx: TgContext) {
-    await ctx.reply(
-      '📖 *POS Bot Commands*\n\n' +
-      '🔐 *Authentication*\n' +
-      '/login — Log in with phone number\n' +
-      '/logout — Log out\n\n' +
-      '📊 *Reports*\n' +
-      '/dashboard — Today\'s overview\n' +
-      '/sales\\_report — Sales summary\n' +
-      '/financial — Financial summary\n' +
-      '/top\\_products — Best selling products\n' +
-      '/top\\_sellers — Best sellers\n\n' +
-      '📦 *Products & Inventory*\n' +
-      '/products — List products\n' +
-      '/search\\_product — Search products\n' +
-      '/low\\_stock — Low stock alerts\n' +
-      '/categories — List categories\n\n' +
-      '🛒 *Sales & Payments*\n' +
-      '/recent\\_sales — Recent sales\n' +
-      '/debts — Debt summary\n' +
-      '/client\\_balances — Client balances\n\n' +
-      '👥 *Other*\n' +
-      '/clients — List clients\n' +
-      '/branches — List branches\n' +
-      '/transactions — Recent transactions\n',
-      { parse_mode: 'Markdown' },
-    );
+    const l = await this.lang(ctx);
+    await this.send(ctx, i18n('help_text', l));
   }
 
-  // ─── /login ───────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // /lang — language selection
+  // ══════════════════════════════════════════════════════════════════
+
+  @Command('lang')
+  async onLang(@Ctx() ctx: TgContext) {
+    const l = await this.lang(ctx);
+    await this.send(ctx, i18n('choose_language', l), Markup.inlineKeyboard([
+      [Markup.button.callback('🇺🇿 O\'zbek', 'set_lang:uz')],
+      [Markup.button.callback('🇬🇧 English', 'set_lang:en')],
+      [Markup.button.callback('🇷🇺 Русский', 'set_lang:ru')],
+    ]));
+  }
+
+  @Action(/^set_lang:(.+)$/)
+  async onSetLang(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const lang = ctx.match![1] as Lang;
+    const chatId = this.chatId(ctx);
+    await this.svc.setLanguage(chatId, lang);
+    const isAuth = await this.svc.isAuthenticated(chatId);
+    await this.send(ctx, i18n('language_set', lang), isAuth ? this.mainMenu(lang) : undefined);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // /login
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('login')
   async onLogin(@Ctx() ctx: TgContext) {
-    const chatId = this.getChatId(ctx);
-    const isAuth = await this.telegramService.isAuthenticated(chatId);
-
-    if (isAuth) {
-      await ctx.reply('✅ You are already logged in. Use /logout to switch accounts.');
+    const chatId = this.chatId(ctx);
+    const l = await this.lang(ctx);
+    if (await this.svc.isAuthenticated(chatId)) {
+      await this.send(ctx, i18n('already_logged_in', l));
       return;
     }
-
-    await this.telegramService.findOrCreateTelegramUser(chatId);
-    await this.telegramService.setState(chatId, 'awaiting_phone');
-
-    await ctx.reply(
-      '📱 Please share your phone number to log in.\n\n' +
-      'You can either:\n' +
-      '• Tap the button below to share your contact\n' +
-      '• Type your phone number (e.g. +998901234567)',
-      Markup.keyboard([
-        [Markup.button.contactRequest('📱 Share Phone Number')],
-        ['❌ Cancel'],
-      ]).resize().oneTime(),
-    );
+    await this.svc.findOrCreateTelegramUser(chatId);
+    await this.svc.setState(chatId, 'awaiting_phone');
+    await this.send(ctx, i18n('login_prompt', l), Markup.keyboard([
+      [Markup.button.contactRequest(i18n('share_phone', l))],
+      [i18n('cancel', l)],
+    ]).resize().oneTime());
   }
-
-  // ─── /logout ──────────────────────────────────────────────────────
 
   @Command('logout')
   async onLogout(@Ctx() ctx: TgContext) {
-    const chatId = this.getChatId(ctx);
-    await this.telegramService.logout(chatId);
-    await ctx.reply(
-      '👋 You have been logged out. Use /login to authenticate again.',
-      Markup.removeKeyboard(),
-    );
+    const chatId = this.chatId(ctx);
+    const l = await this.lang(ctx);
+    await this.svc.logout(chatId);
+    await this.send(ctx, i18n('logged_out', l), Markup.removeKeyboard());
   }
-
-  // ─── Handle Contact / Phone ───────────────────────────────────────
 
   @On('contact')
   async onContact(@Ctx() ctx: TgContext) {
-    const chatId = this.getChatId(ctx);
-    const tgUser = await this.telegramService.getTelegramUser(chatId);
-
-    if (tgUser?.state !== 'awaiting_phone') return;
-
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    if (tg?.state !== 'awaiting_phone') return;
     const contact = (ctx.message as any)?.contact;
     if (!contact?.phone_number) return;
-
     await this.handlePhoneLogin(ctx, chatId, contact.phone_number);
   }
 
-  @On('text')
-  async onText(@Ctx() ctx: TgContext) {
-    const chatId = this.getChatId(ctx);
-    const tgUser = await this.telegramService.getTelegramUser(chatId);
-
-    if (!tgUser) return;
-
-    const text = (ctx.message as any)?.text?.trim();
-    if (!text) return;
-
-    if (text === '❌ Cancel') {
-      await this.telegramService.setState(chatId, 'idle');
-      await ctx.reply('Cancelled.', Markup.removeKeyboard());
-      return;
-    }
-
-    // Handle state-based input
-    if (tgUser.state === 'awaiting_phone') {
-      await this.handlePhoneLogin(ctx, chatId, text);
-      return;
-    }
-
-    if (tgUser.state === 'awaiting_product_search') {
-      await this.telegramService.setState(chatId, 'idle');
-      const auth = await this.requireAuth(ctx);
-      if (!auth) return;
-
-      const products = await this.telegramService.getProducts(auth.tenantId, text);
-      if (!products.length) {
-        await ctx.reply(`No products found for "${text}".`, Markup.removeKeyboard());
-        return;
-      }
-
-      const lines = products.slice(0, 20).map((p, i) =>
-        `${i + 1}. *${this.escMd(p.name)}*\n   💰 ${this.formatCurrency(Number(p.sellingPrice))} | SKU: ${p.sku || '—'}`,
-      );
-      await ctx.reply(
-        `🔍 *Search results for "${this.escMd(text)}":*\n\n${lines.join('\n\n')}`,
-        { parse_mode: 'Markdown', ...Markup.removeKeyboard() },
-      );
-      return;
-    }
-
-    // Handle keyboard button presses
-    const commandMap: Record<string, () => Promise<void>> = {
-      '📊 Dashboard': () => this.onDashboard(ctx),
-      '📈 Sales Report': () => this.onSalesReport(ctx),
-      '📦 Products': () => this.onProducts(ctx),
-      '⚠️ Low Stock': () => this.onLowStock(ctx),
-      '💰 Financial': () => this.onFinancialReport(ctx),
-      '📋 Debts': () => this.onDebts(ctx),
-      '👥 Clients': () => this.onClients(ctx),
-      '🏢 Branches': () => this.onBranches(ctx),
-      '📒 Transactions': () => this.onTransactions(ctx),
-      '📂 Categories': () => this.onCategories(ctx),
-      '❓ Help': () => this.onHelp(ctx),
-    };
-
-    const handler = commandMap[text];
-    if (handler) await handler();
-  }
-
   private async handlePhoneLogin(ctx: TgContext, chatId: string, phone: string) {
-    const user = await this.telegramService.linkUserByPhone(chatId, phone);
-
+    const l = await this.lang(ctx);
+    const user = await this.svc.linkUserByPhone(chatId, phone);
     if (!user) {
-      await this.telegramService.setState(chatId, 'idle');
-      await ctx.reply(
-        '❌ No owner/admin account found with this phone number.\n' +
-        'Make sure you\'re using the phone number registered in the POS system.',
-        Markup.removeKeyboard(),
-      );
+      await this.svc.setState(chatId, 'idle');
+      await this.send(ctx, i18n('login_failed', l), Markup.removeKeyboard());
       return;
     }
-
-    await ctx.reply(
-      `✅ Welcome, *${this.escMd(user.fullName)}*!\n\n` +
-      `🏢 Tenant: *${this.escMd((user as any).tenant?.name ?? '—')}*\n` +
-      `📞 Phone: ${user.phone}\n\n` +
-      'You can now manage your POS system from here.',
-      { parse_mode: 'Markdown', ...this.mainMenuKeyboard() },
-    );
+    await this.send(ctx, i18n('login_success', l, {
+      name: this.esc(user.fullName),
+      tenant: this.esc((user as any).tenant?.name ?? '—'),
+      phone: user.phone ?? '',
+    }), this.mainMenu(l));
   }
 
-  // ─── /dashboard ───────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // /settings
+  // ══════════════════════════════════════════════════════════════════
+
+  @Command('settings')
+  async onSettings(@Ctx() ctx: TgContext) {
+    const l = await this.lang(ctx);
+    await this.send(ctx, i18n('settings_title', l), Markup.inlineKeyboard([
+      [Markup.button.callback(i18n('change_language', l), 'settings_lang')],
+      [Markup.button.callback(i18n('logout_btn', l), 'settings_logout')],
+    ]));
+  }
+
+  @Action('settings_lang')
+  async onSettingsLang(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    await this.onLang(ctx);
+  }
+
+  @Action('settings_logout')
+  async onSettingsLogout(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    await this.onLogout(ctx);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // /dashboard
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('dashboard')
+  @Action('go_dashboard')
   async onDashboard(@Ctx() ctx: TgContext) {
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const { salesSummary, financialSummary, debtSummary } =
-      await this.telegramService.getDashboard(auth.tenantId);
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx);
+    if (!a) return;
+    const l = await this.lang(ctx);
+    const { salesSummary, financialSummary, debtSummary } = await this.svc.getDashboard(a.tenantId);
 
     const msg =
-      `📊 *Today's Dashboard*\n\n` +
-      `🛒 *Sales*\n` +
-      `  Sales: ${salesSummary.totalSales}\n` +
-      `  Revenue: ${this.formatCurrency(salesSummary.totalAmount)}\n` +
-      `  Paid: ${this.formatCurrency(salesSummary.totalPaid)}\n` +
-      `  Outstanding: ${this.formatCurrency(salesSummary.totalOutstanding)}\n\n` +
-      `💰 *Finance*\n` +
-      `  Total Income: ${this.formatCurrency(financialSummary.totalIncome)}\n` +
-      `  Expenses: ${this.formatCurrency(financialSummary.totalExpenses)}\n` +
-      `  Net Profit: ${this.formatCurrency(financialSummary.netProfit)}\n\n` +
-      `📋 *Debts*\n` +
-      `  Total Debt: ${this.formatCurrency(debtSummary.totalDebt)}\n` +
-      `  Pending: ${debtSummary.pendingCount} | Partial: ${debtSummary.partialCount}`;
+      `${i18n('dashboard_title', l)}\n\n` +
+      `${i18n('sales_label', l)}\n` +
+      `  ${i18n('sales_count', l)}: ${salesSummary.totalSales}\n` +
+      `  ${i18n('revenue', l)}: ${this.fmt(salesSummary.totalAmount)}\n` +
+      `  ${i18n('paid', l)}: ${this.fmt(salesSummary.totalPaid)}\n` +
+      `  ${i18n('outstanding', l)}: ${this.fmt(salesSummary.totalOutstanding)}\n\n` +
+      `${i18n('finance_label', l)}\n` +
+      `  ${i18n('total_income', l)}: ${this.fmt(financialSummary.totalIncome)}\n` +
+      `  ${i18n('expenses', l)}: ${this.fmt(financialSummary.totalExpenses)}\n` +
+      `  ${i18n('net_profit', l)}: ${this.fmt(financialSummary.netProfit)}\n\n` +
+      `${i18n('debts_label', l)}\n` +
+      `  ${i18n('total_debt', l)}: ${this.fmt(debtSummary.totalDebt)}\n` +
+      `  ${i18n('pending', l)}: ${debtSummary.pendingCount} | ${i18n('partial', l)}: ${debtSummary.partialCount}`;
 
-    await ctx.reply(msg, {
-      parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard([
-        [Markup.button.callback('🔄 Refresh', 'refresh_dashboard')],
-        [
-          Markup.button.callback('📈 Sales Report', 'sales_report'),
-          Markup.button.callback('💰 Financial', 'financial_report'),
-        ],
-        [
-          Markup.button.callback('⚠️ Low Stock', 'low_stock'),
-          Markup.button.callback('📋 Debts', 'debts_summary'),
-        ],
-      ]),
-    });
+    await this.send(ctx, msg, Markup.inlineKeyboard([
+      [Markup.button.callback(i18n('refresh', l), 'go_dashboard')],
+      [
+        Markup.button.callback(i18n('btn_sales', l), 'cmd_sales_report'),
+        Markup.button.callback(i18n('btn_finance', l), 'cmd_financial'),
+      ],
+      [
+        Markup.button.callback(i18n('btn_debts', l), 'cmd_debts'),
+        Markup.button.callback('🏆 Top', 'cmd_top_products'),
+      ],
+    ]));
   }
 
-  @Action('refresh_dashboard')
-  async onRefreshDashboard(@Ctx() ctx: TgContext) {
-    await ctx.answerCbQuery('Refreshing...');
-    await this.onDashboard(ctx);
-  }
-
-  // ─── /sales_report ────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // SALES REPORT
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('sales_report')
-  @Action('sales_report')
+  @Action('cmd_sales_report')
   async onSalesReport(@Ctx() ctx: TgContext) {
     if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
+    const a = await this.auth(ctx);
+    if (!a) return;
+    const l = await this.lang(ctx);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const s = await this.svc.getSalesSummary(a.tenantId, today.toISOString());
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const summary = await this.telegramService.getSalesSummary(auth.tenantId, today.toISOString());
-
-    await ctx.reply(
-      `📈 *Sales Report (Today)*\n\n` +
-      `🛒 Total Sales: *${summary.totalSales}*\n` +
-      `💵 Total Amount: *${this.formatCurrency(summary.totalAmount)}*\n` +
-      `✅ Paid: *${this.formatCurrency(summary.totalPaid)}*\n` +
-      `💼 Seller Profit: *${this.formatCurrency(summary.totalSellerProfit)}*\n` +
-      `⏳ Outstanding: *${this.formatCurrency(summary.totalOutstanding)}*`,
-      {
-        parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([
-          [
-            Markup.button.callback('📅 This Week', 'sales_week'),
-            Markup.button.callback('📅 This Month', 'sales_month'),
-          ],
-          [Markup.button.callback('🏆 Top Products', 'top_products')],
-          [Markup.button.callback('🔙 Dashboard', 'refresh_dashboard')],
-        ]),
-      },
+    await this.send(ctx,
+      `${i18n('sales_report_today', l)}\n\n` +
+      `${i18n('total_sales', l)}: *${s.totalSales}*\n` +
+      `${i18n('total_amount', l)}: *${this.fmt(s.totalAmount)}*\n` +
+      `${i18n('paid', l)}: *${this.fmt(s.totalPaid)}*\n` +
+      `${i18n('seller_profit', l)}: *${this.fmt(s.totalSellerProfit)}*\n` +
+      `${i18n('outstanding', l)}: *${this.fmt(s.totalOutstanding)}*`,
+      Markup.inlineKeyboard([
+        [
+          Markup.button.callback(i18n('this_week', l), 'sales_week'),
+          Markup.button.callback(i18n('this_month', l), 'sales_month'),
+        ],
+        [Markup.button.callback('🏆 Top', 'cmd_top_products')],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]),
     );
   }
 
   @Action('sales_week')
   async onSalesWeek(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const from = new Date();
-    from.setDate(from.getDate() - 7);
-    from.setHours(0, 0, 0, 0);
-    const summary = await this.telegramService.getSalesSummary(auth.tenantId, from.toISOString());
-
-    await ctx.reply(
-      `📈 *Sales Report (Last 7 Days)*\n\n` +
-      `🛒 Total Sales: *${summary.totalSales}*\n` +
-      `💵 Total Amount: *${this.formatCurrency(summary.totalAmount)}*\n` +
-      `✅ Paid: *${this.formatCurrency(summary.totalPaid)}*\n` +
-      `⏳ Outstanding: *${this.formatCurrency(summary.totalOutstanding)}*`,
-      { parse_mode: 'Markdown' },
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const from = new Date(); from.setDate(from.getDate() - 7); from.setHours(0, 0, 0, 0);
+    const s = await this.svc.getSalesSummary(a.tenantId, from.toISOString());
+    await this.send(ctx,
+      `${i18n('sales_report_week', l)}\n\n${i18n('total_sales', l)}: *${s.totalSales}*\n${i18n('total_amount', l)}: *${this.fmt(s.totalAmount)}*\n${i18n('paid', l)}: *${this.fmt(s.totalPaid)}*\n${i18n('outstanding', l)}: *${this.fmt(s.totalOutstanding)}*`,
+      Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_sales_report')]]),
     );
   }
 
   @Action('sales_month')
   async onSalesMonth(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const from = new Date();
-    from.setDate(1);
-    from.setHours(0, 0, 0, 0);
-    const summary = await this.telegramService.getSalesSummary(auth.tenantId, from.toISOString());
-
-    await ctx.reply(
-      `📈 *Sales Report (This Month)*\n\n` +
-      `🛒 Total Sales: *${summary.totalSales}*\n` +
-      `💵 Total Amount: *${this.formatCurrency(summary.totalAmount)}*\n` +
-      `✅ Paid: *${this.formatCurrency(summary.totalPaid)}*\n` +
-      `⏳ Outstanding: *${this.formatCurrency(summary.totalOutstanding)}*`,
-      { parse_mode: 'Markdown' },
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const from = new Date(); from.setDate(1); from.setHours(0, 0, 0, 0);
+    const s = await this.svc.getSalesSummary(a.tenantId, from.toISOString());
+    await this.send(ctx,
+      `${i18n('sales_report_month', l)}\n\n${i18n('total_sales', l)}: *${s.totalSales}*\n${i18n('total_amount', l)}: *${this.fmt(s.totalAmount)}*\n${i18n('paid', l)}: *${this.fmt(s.totalPaid)}*\n${i18n('outstanding', l)}: *${this.fmt(s.totalOutstanding)}*`,
+      Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_sales_report')]]),
     );
   }
 
-  // ─── /financial ───────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // FINANCIAL REPORT
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('financial')
-  @Action('financial_report')
-  async onFinancialReport(@Ctx() ctx: TgContext) {
+  @Action('cmd_financial')
+  async onFinancial(@Ctx() ctx: TgContext) {
     if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const summary = await this.telegramService.getFinancialSummary(auth.tenantId, today.toISOString());
-
-    await ctx.reply(
-      `💰 *Financial Summary (Today)*\n\n` +
-      `📊 Sales Revenue: *${this.formatCurrency(summary.salesRevenue)}*\n` +
-      `📥 Other Income: *${this.formatCurrency(summary.otherIncome)}*\n` +
-      `📈 Total Income: *${this.formatCurrency(summary.totalIncome)}*\n` +
-      `📤 Total Expenses: *${this.formatCurrency(summary.totalExpenses)}*\n` +
-      `━━━━━━━━━━━━━━━━\n` +
-      `💎 Net Profit: *${this.formatCurrency(summary.netProfit)}*`,
-      {
-        parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([
-          [
-            Markup.button.callback('📅 This Week', 'financial_week'),
-            Markup.button.callback('📅 This Month', 'financial_month'),
-          ],
-          [Markup.button.callback('🔙 Dashboard', 'refresh_dashboard')],
-        ]),
-      },
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const s = await this.svc.getFinancialSummary(a.tenantId, today.toISOString());
+    await this.send(ctx,
+      `${i18n('financial_today', l)}\n\n` +
+      `${i18n('sales_revenue', l)}: *${this.fmt(s.salesRevenue)}*\n` +
+      `${i18n('other_income', l)}: *${this.fmt(s.otherIncome)}*\n` +
+      `${i18n('total_income', l)}: *${this.fmt(s.totalIncome)}*\n` +
+      `${i18n('expenses', l)}: *${this.fmt(s.totalExpenses)}*\n━━━━━━━━━━━━━━━━\n` +
+      `${i18n('net_profit', l)}: *${this.fmt(s.netProfit)}*`,
+      Markup.inlineKeyboard([
+        [
+          Markup.button.callback(i18n('this_week', l), 'fin_week'),
+          Markup.button.callback(i18n('this_month', l), 'fin_month'),
+        ],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]),
     );
   }
 
-  @Action('financial_week')
-  async onFinancialWeek(@Ctx() ctx: TgContext) {
+  @Action('fin_week')
+  async onFinWeek(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const from = new Date();
-    from.setDate(from.getDate() - 7);
-    from.setHours(0, 0, 0, 0);
-    const summary = await this.telegramService.getFinancialSummary(auth.tenantId, from.toISOString());
-
-    await ctx.reply(
-      `💰 *Financial Summary (Last 7 Days)*\n\n` +
-      `📈 Total Income: *${this.formatCurrency(summary.totalIncome)}*\n` +
-      `📤 Expenses: *${this.formatCurrency(summary.totalExpenses)}*\n` +
-      `💎 Net Profit: *${this.formatCurrency(summary.netProfit)}*`,
-      { parse_mode: 'Markdown' },
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const from = new Date(); from.setDate(from.getDate() - 7); from.setHours(0, 0, 0, 0);
+    const s = await this.svc.getFinancialSummary(a.tenantId, from.toISOString());
+    await this.send(ctx,
+      `${i18n('financial_week', l)}\n\n${i18n('total_income', l)}: *${this.fmt(s.totalIncome)}*\n${i18n('expenses', l)}: *${this.fmt(s.totalExpenses)}*\n${i18n('net_profit', l)}: *${this.fmt(s.netProfit)}*`,
+      Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_financial')]]),
     );
   }
 
-  @Action('financial_month')
-  async onFinancialMonth(@Ctx() ctx: TgContext) {
+  @Action('fin_month')
+  async onFinMonth(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const from = new Date();
-    from.setDate(1);
-    from.setHours(0, 0, 0, 0);
-    const summary = await this.telegramService.getFinancialSummary(auth.tenantId, from.toISOString());
-
-    await ctx.reply(
-      `💰 *Financial Summary (This Month)*\n\n` +
-      `📈 Total Income: *${this.formatCurrency(summary.totalIncome)}*\n` +
-      `📤 Expenses: *${this.formatCurrency(summary.totalExpenses)}*\n` +
-      `💎 Net Profit: *${this.formatCurrency(summary.netProfit)}*`,
-      { parse_mode: 'Markdown' },
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const from = new Date(); from.setDate(1); from.setHours(0, 0, 0, 0);
+    const s = await this.svc.getFinancialSummary(a.tenantId, from.toISOString());
+    await this.send(ctx,
+      `${i18n('financial_month', l)}\n\n${i18n('total_income', l)}: *${this.fmt(s.totalIncome)}*\n${i18n('expenses', l)}: *${this.fmt(s.totalExpenses)}*\n${i18n('net_profit', l)}: *${this.fmt(s.netProfit)}*`,
+      Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_financial')]]),
     );
   }
 
-  // ─── /top_products ────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // TOP PRODUCTS / SELLERS
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('top_products')
-  @Action('top_products')
+  @Action('cmd_top_products')
   async onTopProducts(@Ctx() ctx: TgContext) {
     if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const products = await this.telegramService.getTopProducts(auth.tenantId);
-
-    if (!products.length) {
-      await ctx.reply('No sales data available yet.');
-      return;
-    }
-
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const products = await this.svc.getTopProducts(a.tenantId);
+    if (!products.length) { await this.send(ctx, i18n('no_data', l)); return; }
     const lines = products.map((p, i) => {
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-      return `${medal} *${this.escMd(p.name)}*\n   Qty: ${p.totalQuantity} | Revenue: ${this.formatCurrency(p.totalRevenue)}`;
+      const m = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+      return `${m} *${this.esc(p.name)}*\n   Qty: ${p.totalQuantity} | ${this.fmt(p.totalRevenue)}`;
     });
-
-    await ctx.reply(`🏆 *Top Products*\n\n${lines.join('\n\n')}`, { parse_mode: 'Markdown' });
+    await this.send(ctx, `${i18n('top_products_title', l)}\n\n${lines.join('\n\n')}`,
+      Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'go_dashboard')]]),
+    );
   }
-
-  // ─── /top_sellers ─────────────────────────────────────────────────
 
   @Command('top_sellers')
+  @Action('cmd_top_sellers')
   async onTopSellers(@Ctx() ctx: TgContext) {
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const sellers = await this.telegramService.getTopSellers(auth.tenantId);
-
-    if (!sellers.length) {
-      await ctx.reply('No sales data available yet.');
-      return;
-    }
-
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const sellers = await this.svc.getTopSellers(a.tenantId);
+    if (!sellers.length) { await this.send(ctx, i18n('no_data', l)); return; }
     const lines = sellers.map((s, i) => {
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-      return `${medal} *${this.escMd(s.fullName)}*\n   Sales: ${s.salesCount} | Revenue: ${this.formatCurrency(s.totalRevenue)}`;
+      const m = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+      return `${m} *${this.esc(s.fullName)}*\n   Sales: ${s.salesCount} | ${this.fmt(s.totalRevenue)}`;
     });
-
-    await ctx.reply(`👥 *Top Sellers*\n\n${lines.join('\n\n')}`, { parse_mode: 'Markdown' });
+    await this.send(ctx, `${i18n('top_sellers_title', l)}\n\n${lines.join('\n\n')}`,
+      Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'go_dashboard')]]),
+    );
   }
 
-  // ─── /products ────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // PRODUCTS — List / View / Create / Edit / Delete
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('products')
+  @Action('cmd_products')
   async onProducts(@Ctx() ctx: TgContext) {
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const products = await this.telegramService.getProducts(auth.tenantId);
-
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const products = await this.svc.getProducts(a.tenantId);
     if (!products.length) {
-      await ctx.reply('No products found.');
+      await this.send(ctx, i18n('products_empty', l), Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('add', l), 'product_add')],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]));
       return;
     }
-
-    const lines = products.slice(0, 30).map((p, i) =>
-      `${i + 1}. *${this.escMd(p.name)}* — 💰 ${this.formatCurrency(Number(p.sellingPrice))}`,
+    const list = products.slice(0, 20).map((p, i) =>
+      `${i + 1}. *${this.esc(p.name)}* — ${this.fmt(Number(p.sellingPrice))}`,
     );
+    const btns = products.slice(0, 20).map(p =>
+      [Markup.button.callback(`📦 ${p.name.substring(0, 30)}`, `pv:${p.id}`)],
+    );
+    btns.push([
+      Markup.button.callback(i18n('add', l), 'product_add'),
+      Markup.button.callback(i18n('search', l), 'product_search'),
+    ]);
+    btns.push([Markup.button.callback(i18n('back', l), 'go_dashboard')]);
+    await this.send(ctx, `${i18n('products_title', l)}\n\n${list.join('\n')}`, Markup.inlineKeyboard(btns));
+  }
 
-    const total = products.length;
-    const shown = Math.min(30, total);
-
-    await ctx.reply(
-      `📦 *Products* (${shown}/${total})\n\n${lines.join('\n')}` +
-      (total > 30 ? '\n\n_Use /search\\_product to find specific products_' : ''),
-      {
-        parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([
-          [Markup.button.callback('🔍 Search', 'search_product')],
+  @Action(/^pv:(.+)$/)
+  async onProductView(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    try {
+      const p = await this.svc.getProduct(a.tenantId, ctx.match![1]);
+      await this.send(ctx,
+        `${i18n('product_detail', l)}\n\n` +
+        `${i18n('product_name', l)}: *${this.esc(p.name)}*\n` +
+        `${i18n('selling_price', l)}: *${this.fmt(Number(p.sellingPrice))}*\n` +
+        `${i18n('cost_price', l)}: ${p.costPrice ? this.fmt(Number(p.costPrice)) : '—'}\n` +
+        `${i18n('product_sku', l)}: ${p.sku || '—'}\n` +
+        `${i18n('product_barcode', l)}: ${p.barcode || '—'}\n` +
+        `${i18n('stock', l)}: ${(p as any).inventory?.quantity ?? '—'}`,
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback(i18n('edit', l), `pe:${p.id}`),
+            Markup.button.callback(i18n('delete_btn', l), `pd:${p.id}`),
+          ],
+          [Markup.button.callback(i18n('back', l), 'cmd_products')],
         ]),
-      },
-    );
+      );
+    } catch { await this.send(ctx, i18n('not_found', l)); }
   }
 
-  // ─── /search_product ──────────────────────────────────────────────
-
-  @Command('search_product')
-  @Action('search_product')
-  async onSearchProduct(@Ctx() ctx: TgContext) {
-    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const chatId = this.getChatId(ctx);
-    await this.telegramService.setState(chatId, 'awaiting_product_search');
-
-    await ctx.reply('🔍 Type the product name to search:');
+  // ─── Product Create ───────────────────────────────────────────────
+  @Action('product_add')
+  async onProductAdd(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    await this.svc.setState(this.chatId(ctx), 'product_name', {});
+    await this.send(ctx, i18n('enter_name', l));
   }
 
-  // ─── /recent_sales ────────────────────────────────────────────────
-
-  @Command('recent_sales')
-  async onRecentSales(@Ctx() ctx: TgContext) {
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const sales = await this.telegramService.getRecentSales(auth.tenantId, 10);
-
-    if (!sales.length) {
-      await ctx.reply('No sales found.');
-      return;
-    }
-
-    const lines = sales.map((s: any, i: number) => {
-      const date = new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const statusIcon = s.paymentStatus === 'paid' ? '✅' : s.paymentStatus === 'partial' ? '⚠️' : '⏳';
-      return `${i + 1}. ${statusIcon} ${date} — *${this.formatCurrency(Number(s.finalAmount))}* (${s.paymentStatus})`;
-    });
-
-    await ctx.reply(`🛒 *Recent Sales*\n\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
+  // ─── Product Edit ─────────────────────────────────────────────────
+  @Action(/^pe:(.+)$/)
+  async onProductEdit(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const id = ctx.match![1];
+    await this.send(ctx, `${i18n('edit', l)} — ${i18n('select_action', l)}`, Markup.inlineKeyboard([
+      [Markup.button.callback(i18n('product_name', l), `pef:${id}:name`)],
+      [Markup.button.callback(i18n('selling_price', l), `pef:${id}:sellingPrice`)],
+      [Markup.button.callback(i18n('cost_price', l), `pef:${id}:costPrice`)],
+      [Markup.button.callback(i18n('back', l), `pv:${id}`)],
+    ]));
   }
 
-  // ─── /low_stock ───────────────────────────────────────────────────
-
-  @Command('low_stock')
-  @Action('low_stock')
-  async onLowStock(@Ctx() ctx: TgContext) {
-    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const items = await this.telegramService.getLowStock(auth.tenantId);
-
-    if (!items.length) {
-      await ctx.reply('✅ No low stock items. Everything looks good!');
-      return;
-    }
-
-    const lines = items.slice(0, 20).map((item: any, i: number) =>
-      `${i + 1}. ⚠️ *${this.escMd(item.product?.name ?? item.productName ?? 'Unknown')}*\n   Stock: ${Number(item.quantity)} / Min: ${Number(item.minQuantity)}`,
-    );
-
-    await ctx.reply(
-      `⚠️ *Low Stock Alert* (${items.length} items)\n\n${lines.join('\n\n')}`,
-      { parse_mode: 'Markdown' },
-    );
+  @Action(/^pef:(.+):(.+)$/)
+  async onProductEditField(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const [id, field] = [ctx.match![1], ctx.match![2]];
+    await this.svc.setState(this.chatId(ctx), 'product_edit', { entityId: id, field });
+    const prompt = field === 'name' ? i18n('enter_name', l) : field === 'sellingPrice' ? i18n('enter_selling_price', l) : i18n('enter_cost_price', l);
+    await this.send(ctx, prompt);
   }
 
-  // ─── /debts ───────────────────────────────────────────────────────
-
-  @Command('debts')
-  @Action('debts_summary')
-  async onDebts(@Ctx() ctx: TgContext) {
-    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const summary = await this.telegramService.getDebtSummary(auth.tenantId);
-
-    await ctx.reply(
-      `📋 *Debt Summary*\n\n` +
-      `💸 Total Debt: *${this.formatCurrency(summary.totalDebt)}*\n` +
-      `📊 Total Unpaid Sales: *${summary.totalSales}*\n` +
-      `⏳ Pending: *${summary.pendingCount}*\n` +
-      `⚠️ Partial: *${summary.partialCount}*\n\n` +
-      `📅 *Aging*\n` +
-      `  Current (0-30d): ${this.formatCurrency(summary.aging.current)}\n` +
-      `  31-60 days: ${this.formatCurrency(summary.aging['31-60'])}\n` +
-      `  61-90 days: ${this.formatCurrency(summary.aging['61-90'])}\n` +
-      `  90+ days: ${this.formatCurrency(summary.aging['90+'])}`,
-      {
-        parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([
-          [Markup.button.callback('👥 Client Balances', 'client_balances')],
-          [Markup.button.callback('🔙 Dashboard', 'refresh_dashboard')],
-        ]),
-      },
-    );
+  // ─── Product Delete ───────────────────────────────────────────────
+  @Action(/^pd:(.+)$/)
+  async onProductDelete(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    await this.send(ctx, i18n('confirm_delete', l), Markup.inlineKeyboard([
+      [
+        Markup.button.callback(i18n('yes', l), `pdc:${ctx.match![1]}`),
+        Markup.button.callback(i18n('no', l), `pv:${ctx.match![1]}`),
+      ],
+    ]));
   }
 
-  // ─── /client_balances ─────────────────────────────────────────────
-
-  @Command('client_balances')
-  @Action('client_balances')
-  async onClientBalances(@Ctx() ctx: TgContext) {
-    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const balances = await this.telegramService.getClientBalances(auth.tenantId);
-
-    if (!balances.length) {
-      await ctx.reply('No client debts found.');
-      return;
-    }
-
-    const lines = balances.slice(0, 20).map((b: any, i: number) =>
-      `${i + 1}. *${this.escMd(b.client?.fullName ?? b.fullName ?? '—')}*\n   Debt: ${this.formatCurrency(Number(b.totalDebt ?? b.debtAmount ?? 0))}`,
-    );
-
-    await ctx.reply(
-      `👥 *Client Balances*\n\n${lines.join('\n\n')}`,
-      { parse_mode: 'Markdown' },
-    );
+  @Action(/^pdc:(.+)$/)
+  async onProductDeleteConfirm(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    try {
+      await this.svc.deleteProduct(a.tenantId, ctx.match![1]);
+      await this.send(ctx, i18n('deleted', l), Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('back', l), 'cmd_products')],
+      ]));
+    } catch { await this.send(ctx, i18n('error', l)); }
   }
 
-  // ─── /clients ─────────────────────────────────────────────────────
+  // ─── Product Search ───────────────────────────────────────────────
+  @Action('product_search')
+  async onProductSearch(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    await this.svc.setState(this.chatId(ctx), 'product_search', {});
+    await this.send(ctx, i18n('search_products', l));
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // CLIENTS — List / View / Create / Edit / Delete
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('clients')
+  @Action('cmd_clients')
   async onClients(@Ctx() ctx: TgContext) {
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const clients = await this.telegramService.getClients(auth.tenantId);
-
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const clients = await this.svc.getClients(a.tenantId);
     if (!clients.length) {
-      await ctx.reply('No clients found.');
+      await this.send(ctx, i18n('clients_empty', l), Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('add', l), 'client_add')],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]));
       return;
     }
-
-    const lines = clients.slice(0, 20).map((c: any, i: number) =>
-      `${i + 1}. *${this.escMd(c.fullName)}* — 📞 ${c.phone || '—'}`,
+    const list = clients.slice(0, 20).map((c: any, i) =>
+      `${i + 1}. *${this.esc(c.fullName)}* — 📞 ${c.phone || '—'}`,
     );
-
-    await ctx.reply(
-      `👥 *Clients* (${Math.min(20, clients.length)}/${clients.length})\n\n${lines.join('\n')}`,
-      { parse_mode: 'Markdown' },
+    const btns = clients.slice(0, 20).map((c: any) =>
+      [Markup.button.callback(`👤 ${c.fullName.substring(0, 30)}`, `cv:${c.id}`)],
     );
+    btns.push([Markup.button.callback(i18n('add', l), 'client_add')]);
+    btns.push([Markup.button.callback(i18n('back', l), 'go_dashboard')]);
+    await this.send(ctx, `${i18n('clients_title', l)}\n\n${list.join('\n')}`, Markup.inlineKeyboard(btns));
   }
 
-  // ─── /branches ────────────────────────────────────────────────────
+  @Action(/^cv:(.+)$/)
+  async onClientView(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    try {
+      const c = await this.svc.getClient(a.tenantId, ctx.match![1]) as any;
+      await this.send(ctx,
+        `${i18n('client_detail', l)}\n\n` +
+        `${i18n('product_name', l)}: *${this.esc(c.fullName)}*\n` +
+        `📞: ${c.phone || '—'}\n📍: ${c.address || '—'}\n📝: ${c.notes || '—'}`,
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback(i18n('edit', l), `ce:${c.id}`),
+            Markup.button.callback(i18n('delete_btn', l), `cd:${c.id}`),
+          ],
+          [Markup.button.callback(i18n('back', l), 'cmd_clients')],
+        ]),
+      );
+    } catch { await this.send(ctx, i18n('not_found', l)); }
+  }
+
+  @Action('client_add')
+  async onClientAdd(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    await this.auth(ctx);
+    const l = await this.lang(ctx);
+    await this.svc.setState(this.chatId(ctx), 'client_name', {});
+    await this.send(ctx, i18n('enter_fullname', l));
+  }
+
+  @Action(/^ce:(.+)$/)
+  async onClientEdit(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const id = ctx.match![1];
+    await this.send(ctx, `${i18n('edit', l)} — ${i18n('select_action', l)}`, Markup.inlineKeyboard([
+      [Markup.button.callback(i18n('product_name', l), `cef:${id}:fullName`)],
+      [Markup.button.callback('📞', `cef:${id}:phone`)],
+      [Markup.button.callback('📍', `cef:${id}:address`)],
+      [Markup.button.callback(i18n('back', l), `cv:${id}`)],
+    ]));
+  }
+
+  @Action(/^cef:(.+):(.+)$/)
+  async onClientEditField(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const [id, field] = [ctx.match![1], ctx.match![2]];
+    await this.svc.setState(this.chatId(ctx), 'client_edit', { entityId: id, field });
+    const prompt = field === 'fullName' ? i18n('enter_fullname', l) : field === 'phone' ? i18n('enter_phone', l) : i18n('enter_address', l);
+    await this.send(ctx, prompt);
+  }
+
+  @Action(/^cd:(.+)$/)
+  async onClientDelete(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    await this.send(ctx, i18n('confirm_delete', l), Markup.inlineKeyboard([
+      [
+        Markup.button.callback(i18n('yes', l), `cdc:${ctx.match![1]}`),
+        Markup.button.callback(i18n('no', l), `cv:${ctx.match![1]}`),
+      ],
+    ]));
+  }
+
+  @Action(/^cdc:(.+)$/)
+  async onClientDeleteConfirm(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    try {
+      await this.svc.deleteClient(a.tenantId, ctx.match![1]);
+      await this.send(ctx, i18n('deleted', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_clients')]]));
+    } catch { await this.send(ctx, i18n('error', l)); }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // BRANCHES — List / View / Create / Edit / Delete
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('branches')
+  @Action('cmd_branches')
   async onBranches(@Ctx() ctx: TgContext) {
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const branches = await this.telegramService.getBranches(auth.tenantId);
-
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const branches = await this.svc.getBranches(a.tenantId);
     if (!branches.length) {
-      await ctx.reply('No branches found.');
+      await this.send(ctx, i18n('branches_empty', l), Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('add', l), 'branch_add')],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]));
       return;
     }
-
-    const lines = branches.map((b: any, i: number) =>
-      `${i + 1}. *${this.escMd(b.name)}*${b.address ? `\n   📍 ${this.escMd(b.address)}` : ''}${b.phone ? `\n   📞 ${b.phone}` : ''}`,
+    const list = branches.map((b: any, i) =>
+      `${i + 1}. *${this.esc(b.name)}*${b.address ? `\n   📍 ${this.esc(b.address)}` : ''}`,
     );
-
-    await ctx.reply(`🏢 *Branches*\n\n${lines.join('\n\n')}`, { parse_mode: 'Markdown' });
+    const btns = branches.map((b: any) =>
+      [Markup.button.callback(`🏢 ${b.name.substring(0, 30)}`, `bv:${b.id}`)],
+    );
+    btns.push([Markup.button.callback(i18n('add', l), 'branch_add')]);
+    btns.push([Markup.button.callback(i18n('back', l), 'go_dashboard')]);
+    await this.send(ctx, `${i18n('branches_title', l)}\n\n${list.join('\n')}`, Markup.inlineKeyboard(btns));
   }
 
-  // ─── /categories ──────────────────────────────────────────────────
+  @Action(/^bv:(.+)$/)
+  async onBranchView(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    try {
+      const b = await this.svc.getBranch(a.tenantId, ctx.match![1]) as any;
+      await this.send(ctx,
+        `${i18n('branch_detail', l)}\n\n` +
+        `${i18n('product_name', l)}: *${this.esc(b.name)}*\n📍: ${b.address || '—'}\n📞: ${b.phone || '—'}`,
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback(i18n('edit', l), `be:${b.id}`),
+            Markup.button.callback(i18n('delete_btn', l), `bd:${b.id}`),
+          ],
+          [Markup.button.callback(i18n('back', l), 'cmd_branches')],
+        ]),
+      );
+    } catch { await this.send(ctx, i18n('not_found', l)); }
+  }
+
+  @Action('branch_add')
+  async onBranchAdd(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    await this.auth(ctx);
+    const l = await this.lang(ctx);
+    await this.svc.setState(this.chatId(ctx), 'branch_name', {});
+    await this.send(ctx, i18n('enter_name', l));
+  }
+
+  @Action(/^be:(.+)$/)
+  async onBranchEdit(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const id = ctx.match![1];
+    await this.send(ctx, `${i18n('edit', l)} — ${i18n('select_action', l)}`, Markup.inlineKeyboard([
+      [Markup.button.callback(i18n('product_name', l), `bef:${id}:name`)],
+      [Markup.button.callback('📍', `bef:${id}:address`)],
+      [Markup.button.callback('📞', `bef:${id}:phone`)],
+      [Markup.button.callback(i18n('back', l), `bv:${id}`)],
+    ]));
+  }
+
+  @Action(/^bef:(.+):(.+)$/)
+  async onBranchEditField(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const [id, field] = [ctx.match![1], ctx.match![2]];
+    await this.svc.setState(this.chatId(ctx), 'branch_edit', { entityId: id, field });
+    const prompt = field === 'name' ? i18n('enter_name', l) : field === 'address' ? i18n('enter_address', l) : i18n('enter_phone', l);
+    await this.send(ctx, prompt);
+  }
+
+  @Action(/^bd:(.+)$/)
+  async onBranchDelete(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    await this.send(ctx, i18n('confirm_delete', l), Markup.inlineKeyboard([
+      [
+        Markup.button.callback(i18n('yes', l), `bdc:${ctx.match![1]}`),
+        Markup.button.callback(i18n('no', l), `bv:${ctx.match![1]}`),
+      ],
+    ]));
+  }
+
+  @Action(/^bdc:(.+)$/)
+  async onBranchDeleteConfirm(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    try {
+      await this.svc.deleteBranch(a.tenantId, ctx.match![1]);
+      await this.send(ctx, i18n('deleted', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_branches')]]));
+    } catch { await this.send(ctx, i18n('error', l)); }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // CATEGORIES — List / Create / Edit / Delete
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('categories')
+  @Action('cmd_categories')
   async onCategories(@Ctx() ctx: TgContext) {
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const categories = await this.telegramService.getCategories(auth.tenantId);
-
-    if (!categories.length) {
-      await ctx.reply('No categories found.');
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const cats = await this.svc.getCategories(a.tenantId);
+    if (!cats.length) {
+      await this.send(ctx, i18n('categories_empty', l), Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('add', l), 'cat_add')],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]));
       return;
     }
-
-    const lines = categories.map((c: any, i: number) =>
-      `${i + 1}. *${this.escMd(c.name)}*${c.description ? ` — ${this.escMd(c.description)}` : ''}`,
+    const list = cats.map((c: any, i) => `${i + 1}. *${this.esc(c.name)}*${c.description ? ` — ${this.esc(c.description)}` : ''}`);
+    const btns = cats.map((c: any) =>
+      [Markup.button.callback(`📂 ${c.name.substring(0, 30)}`, `catv:${c.id}`)],
     );
-
-    await ctx.reply(`📂 *Categories*\n\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
+    btns.push([Markup.button.callback(i18n('add', l), 'cat_add')]);
+    btns.push([Markup.button.callback(i18n('back', l), 'go_dashboard')]);
+    await this.send(ctx, `${i18n('categories_title', l)}\n\n${list.join('\n')}`, Markup.inlineKeyboard(btns));
   }
 
-  // ─── /transactions ────────────────────────────────────────────────
+  @Action(/^catv:(.+)$/)
+  async onCategoryView(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    try {
+      const c = await this.svc.getCategory(a.tenantId, ctx.match![1]) as any;
+      await this.send(ctx,
+        `📂 *${this.esc(c.name)}*\n${c.description ? `📝 ${this.esc(c.description)}` : ''}`,
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback(i18n('edit', l), `cate:${c.id}`),
+            Markup.button.callback(i18n('delete_btn', l), `catd:${c.id}`),
+          ],
+          [Markup.button.callback(i18n('back', l), 'cmd_categories')],
+        ]),
+      );
+    } catch { await this.send(ctx, i18n('not_found', l)); }
+  }
+
+  @Action('cat_add')
+  async onCategoryAdd(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    await this.auth(ctx);
+    const l = await this.lang(ctx);
+    await this.svc.setState(this.chatId(ctx), 'cat_name', {});
+    await this.send(ctx, i18n('enter_name', l));
+  }
+
+  @Action(/^cate:(.+)$/)
+  async onCategoryEdit(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const id = ctx.match![1];
+    await this.send(ctx, `${i18n('edit', l)} — ${i18n('select_action', l)}`, Markup.inlineKeyboard([
+      [Markup.button.callback(i18n('product_name', l), `catef:${id}:name`)],
+      [Markup.button.callback('📝', `catef:${id}:description`)],
+      [Markup.button.callback(i18n('back', l), `catv:${id}`)],
+    ]));
+  }
+
+  @Action(/^catef:(.+):(.+)$/)
+  async onCategoryEditField(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const [id, field] = [ctx.match![1], ctx.match![2]];
+    await this.svc.setState(this.chatId(ctx), 'cat_edit', { entityId: id, field });
+    await this.send(ctx, field === 'name' ? i18n('enter_name', l) : i18n('enter_description', l));
+  }
+
+  @Action(/^catd:(.+)$/)
+  async onCategoryDelete(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    await this.send(ctx, i18n('confirm_delete', l), Markup.inlineKeyboard([
+      [
+        Markup.button.callback(i18n('yes', l), `catdc:${ctx.match![1]}`),
+        Markup.button.callback(i18n('no', l), `catv:${ctx.match![1]}`),
+      ],
+    ]));
+  }
+
+  @Action(/^catdc:(.+)$/)
+  async onCategoryDeleteConfirm(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    try {
+      await this.svc.deleteCategory(a.tenantId, ctx.match![1]);
+      await this.send(ctx, i18n('deleted', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_categories')]]));
+    } catch { await this.send(ctx, i18n('error', l)); }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // INVENTORY — List / Low Stock / Create / Edit / Delete
+  // ══════════════════════════════════════════════════════════════════
+
+  @Command('inventory')
+  @Action('cmd_inventory')
+  async onInventory(@Ctx() ctx: TgContext) {
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const items = await this.svc.getInventory(a.tenantId);
+    if (!items.length) {
+      await this.send(ctx, i18n('inventory_empty', l), Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('add', l), 'inv_add')],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]));
+      return;
+    }
+    const list = (items as any[]).slice(0, 20).map((item, i) =>
+      `${i + 1}. *${this.esc(item.product?.name ?? '—')}* — ${i18n('stock', l)}: ${Number(item.quantity)}/${Number(item.minQuantity)}`,
+    );
+    const btns = (items as any[]).slice(0, 20).map(item =>
+      [Markup.button.callback(`📋 ${(item.product?.name ?? '—').substring(0, 30)}`, `invv:${item.id}`)],
+    );
+    btns.push([
+      Markup.button.callback(i18n('add', l), 'inv_add'),
+      Markup.button.callback('⚠️ Low', 'cmd_low_stock'),
+    ]);
+    btns.push([Markup.button.callback(i18n('back', l), 'go_dashboard')]);
+    await this.send(ctx, `${i18n('inventory_title', l)}\n\n${list.join('\n')}`, Markup.inlineKeyboard(btns));
+  }
+
+  @Command('low_stock')
+  @Action('cmd_low_stock')
+  async onLowStock(@Ctx() ctx: TgContext) {
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const items = await this.svc.getLowStock(a.tenantId);
+    if (!items.length) {
+      await this.send(ctx, i18n('low_stock_ok', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_inventory')]]));
+      return;
+    }
+    const list = items.slice(0, 20).map((item: any, i) =>
+      `${i + 1}. ⚠️ *${this.esc(item.product?.name ?? '—')}*\n   ${i18n('stock', l)}: ${Number(item.quantity)} / ${i18n('min_stock', l)}: ${Number(item.minQuantity)}`,
+    );
+    await this.send(ctx, `${i18n('low_stock_title', l)} (${items.length})\n\n${list.join('\n\n')}`,
+      Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_inventory')]]),
+    );
+  }
+
+  @Action(/^invv:(.+)$/)
+  async onInventoryView(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    try {
+      const item = await this.svc.getInventoryItem(ctx.match![1]) as any;
+      await this.send(ctx,
+        `📋 *${this.esc(item.product?.name ?? '—')}*\n` +
+        `${i18n('stock', l)}: *${Number(item.quantity)}*\n` +
+        `${i18n('min_stock', l)}: *${Number(item.minQuantity)}*`,
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback(i18n('edit', l), `inve:${item.id}`),
+            Markup.button.callback(i18n('delete_btn', l), `invd:${item.id}`),
+          ],
+          [Markup.button.callback(i18n('back', l), 'cmd_inventory')],
+        ]),
+      );
+    } catch { await this.send(ctx, i18n('not_found', l)); }
+  }
+
+  @Action('inv_add')
+  async onInventoryAdd(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const products = await this.svc.getProducts(a.tenantId);
+    if (!products.length) { await this.send(ctx, i18n('products_empty', l)); return; }
+    const btns = products.slice(0, 20).map(p =>
+      [Markup.button.callback(p.name.substring(0, 40), `inv_prod:${p.id}`)],
+    );
+    btns.push([Markup.button.callback(i18n('cancel', l), 'cmd_inventory')]);
+    await this.send(ctx, i18n('select_product', l), Markup.inlineKeyboard(btns));
+  }
+
+  @Action(/^inv_prod:(.+)$/)
+  async onInventorySelectProduct(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    await this.svc.setState(this.chatId(ctx), 'inv_qty', { productId: ctx.match![1] });
+    await this.send(ctx, i18n('enter_quantity', l));
+  }
+
+  @Action(/^inve:(.+)$/)
+  async onInventoryEdit(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const id = ctx.match![1];
+    await this.send(ctx, `${i18n('edit', l)} — ${i18n('select_action', l)}`, Markup.inlineKeyboard([
+      [Markup.button.callback(i18n('stock', l), `invef:${id}:quantity`)],
+      [Markup.button.callback(i18n('min_stock', l), `invef:${id}:minQuantity`)],
+      [Markup.button.callback(i18n('back', l), `invv:${id}`)],
+    ]));
+  }
+
+  @Action(/^invef:(.+):(.+)$/)
+  async onInventoryEditField(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const [id, field] = [ctx.match![1], ctx.match![2]];
+    await this.svc.setState(this.chatId(ctx), 'inv_edit', { entityId: id, field });
+    await this.send(ctx, field === 'quantity' ? i18n('enter_quantity', l) : i18n('enter_min_quantity', l));
+  }
+
+  @Action(/^invd:(.+)$/)
+  async onInventoryDelete(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    await this.send(ctx, i18n('confirm_delete', l), Markup.inlineKeyboard([
+      [
+        Markup.button.callback(i18n('yes', l), `invdc:${ctx.match![1]}`),
+        Markup.button.callback(i18n('no', l), `invv:${ctx.match![1]}`),
+      ],
+    ]));
+  }
+
+  @Action(/^invdc:(.+)$/)
+  async onInventoryDeleteConfirm(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    try {
+      await this.svc.deleteInventory(ctx.match![1]);
+      await this.send(ctx, i18n('deleted', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_inventory')]]));
+    } catch { await this.send(ctx, i18n('error', l)); }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // TRANSACTIONS — List / Create / Edit / Delete
+  // ══════════════════════════════════════════════════════════════════
 
   @Command('transactions')
+  @Action('cmd_transactions')
   async onTransactions(@Ctx() ctx: TgContext) {
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
-
-    const transactions = await this.telegramService.getTransactions(auth.tenantId);
-
-    if (!transactions.length) {
-      await ctx.reply('No transactions found.');
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const txns = await this.svc.getTransactions(a.tenantId);
+    if (!txns.length) {
+      await this.send(ctx, i18n('transactions_empty', l), Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('add', l), 'txn_add')],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]));
       return;
     }
-
-    const lines = transactions.slice(0, 15).map((t: any, i: number) => {
-      const icon = t.type === 'income' ? '📥' : '📤';
-      const date = new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `${i + 1}. ${icon} ${date} — *${this.formatCurrency(Number(t.amount))}* (${t.type})${t.description ? `\n   ${this.escMd(t.description)}` : ''}`;
+    const list = txns.slice(0, 15).map((t: any, i) => {
+      const ic = t.type === 'income' ? '📥' : '📤';
+      const d = new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `${i + 1}. ${ic} ${d} — *${this.fmt(Number(t.amount))}*${t.description ? `\n   ${this.esc(t.description)}` : ''}`;
     });
+    await this.send(ctx, `${i18n('transactions_title', l)}\n\n${list.join('\n\n')}`, Markup.inlineKeyboard([
+      [
+        Markup.button.callback(i18n('income_only', l), 'txn_filter:income'),
+        Markup.button.callback(i18n('expense_only', l), 'txn_filter:expense'),
+      ],
+      [Markup.button.callback(i18n('add', l), 'txn_add')],
+      [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+    ]));
+  }
 
-    await ctx.reply(
-      `📒 *Recent Transactions*\n\n${lines.join('\n\n')}`,
-      {
-        parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([
-          [
-            Markup.button.callback('📥 Income Only', 'txn_income'),
-            Markup.button.callback('📤 Expenses Only', 'txn_expense'),
-          ],
-        ]),
-      },
+  @Action(/^txn_filter:(.+)$/)
+  async onTxnFilter(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const type = ctx.match![1];
+    const txns = await this.svc.getTransactions(a.tenantId, type);
+    if (!txns.length) { await this.send(ctx, i18n('transactions_empty', l)); return; }
+    const ic = type === 'income' ? '📥' : '📤';
+    const list = txns.slice(0, 15).map((t: any, i) => {
+      const d = new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `${i + 1}. ${ic} ${d} — *${this.fmt(Number(t.amount))}*${t.description ? ` — ${this.esc(t.description)}` : ''}`;
+    });
+    await this.send(ctx, `${ic} *${type === 'income' ? i18n('income_only', l) : i18n('expense_only', l)}*\n\n${list.join('\n')}`,
+      Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_transactions')]]),
     );
   }
 
-  @Action('txn_income')
-  async onTxnIncome(@Ctx() ctx: TgContext) {
+  @Action('txn_add')
+  async onTxnAdd(@Ctx() ctx: TgContext) {
     await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const branches = await this.svc.getBranches(a.tenantId);
+    if (!branches.length) { await this.send(ctx, i18n('branches_empty', l)); return; }
+    if (branches.length === 1) {
+      // Auto-select single branch
+      await this.svc.setState(this.chatId(ctx), 'txn_type', { branchId: (branches[0] as any).id });
+      await this.send(ctx, i18n('select_type', l), Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('income_only', l), 'txnt:income')],
+        [Markup.button.callback(i18n('expense_only', l), 'txnt:expense')],
+        [Markup.button.callback(i18n('cancel', l), 'cmd_transactions')],
+      ]));
+      return;
+    }
+    const btns = branches.map((b: any) =>
+      [Markup.button.callback(`🏢 ${b.name.substring(0, 30)}`, `txnb:${b.id}`)],
+    );
+    btns.push([Markup.button.callback(i18n('cancel', l), 'cmd_transactions')]);
+    await this.send(ctx, i18n('select_branch', l), Markup.inlineKeyboard(btns));
+  }
 
-    const transactions = await this.telegramService.getTransactions(auth.tenantId, 'income');
-    if (!transactions.length) {
-      await ctx.reply('No income transactions found.');
+  @Action(/^txnb:(.+)$/)
+  async onTxnSelectBranch(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    await this.svc.setState(this.chatId(ctx), 'txn_type', { branchId: ctx.match![1] });
+    await this.send(ctx, i18n('select_type', l), Markup.inlineKeyboard([
+      [Markup.button.callback(i18n('income_only', l), 'txnt:income')],
+      [Markup.button.callback(i18n('expense_only', l), 'txnt:expense')],
+      [Markup.button.callback(i18n('cancel', l), 'cmd_transactions')],
+    ]));
+  }
+
+  @Action(/^txnt:(.+)$/)
+  async onTxnSelectType(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    const data = (tg?.stateData as any) || {};
+    await this.svc.setState(chatId, 'txn_amount', { ...data, type: ctx.match![1] });
+    await this.send(ctx, i18n('enter_amount', l));
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // DEBTS (read-only)
+  // ══════════════════════════════════════════════════════════════════
+
+  @Command('debts')
+  @Action('cmd_debts')
+  async onDebts(@Ctx() ctx: TgContext) {
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const s = await this.svc.getDebtSummary(a.tenantId);
+    await this.send(ctx,
+      `${i18n('debts_title', l)}\n\n` +
+      `${i18n('total_debt', l)}: *${this.fmt(s.totalDebt)}*\n` +
+      `${i18n('total_unpaid', l)}: *${s.totalSales}*\n` +
+      `${i18n('pending', l)}: *${s.pendingCount}*\n` +
+      `${i18n('partial', l)}: *${s.partialCount}*\n\n` +
+      `📅 *${i18n('aging', l)}*\n` +
+      `  0-30d: ${this.fmt(s.aging.current)}\n` +
+      `  31-60d: ${this.fmt(s.aging['31-60'])}\n` +
+      `  61-90d: ${this.fmt(s.aging['61-90'])}\n` +
+      `  90+d: ${this.fmt(s.aging['90+'])}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('client_balances_title', l), 'cmd_client_bal')],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]),
+    );
+  }
+
+  @Action('cmd_client_bal')
+  async onClientBalances(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const balances = await this.svc.getClientBalances(a.tenantId);
+    if (!balances.length) { await this.send(ctx, i18n('debts_empty', l)); return; }
+    const list = balances.slice(0, 20).map((b: any, i) =>
+      `${i + 1}. *${this.esc(b.client?.fullName ?? b.fullName ?? '—')}*\n   💸 ${this.fmt(Number(b.totalDebt ?? b.debtAmount ?? 0))}`,
+    );
+    await this.send(ctx, `${i18n('client_balances_title', l)}\n\n${list.join('\n\n')}`,
+      Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_debts')]]),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // RECENT SALES
+  // ══════════════════════════════════════════════════════════════════
+
+  @Command('recent_sales')
+  @Action('cmd_recent_sales')
+  async onRecentSales(@Ctx() ctx: TgContext) {
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const sales = await this.svc.getRecentSales(a.tenantId, 10);
+    if (!sales.length) { await this.send(ctx, i18n('recent_sales_empty', l)); return; }
+    const list = sales.map((s: any, i: number) => {
+      const d = new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const ic = s.paymentStatus === 'paid' ? '✅' : s.paymentStatus === 'partial' ? '⚠️' : '⏳';
+      return `${i + 1}. ${ic} ${d} — *${this.fmt(Number(s.finalAmount))}* (${s.paymentStatus})`;
+    });
+    await this.send(ctx, `${i18n('recent_sales_title', l)}\n\n${list.join('\n')}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback(i18n('btn_pos', l), 'pos_start')],
+        [Markup.button.callback(i18n('back', l), 'go_dashboard')],
+      ]),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // POS SALE — Full sale creation flow
+  // ══════════════════════════════════════════════════════════════════
+
+  @Command('pos')
+  @Action('pos_start')
+  async onPosStart(@Ctx() ctx: TgContext) {
+    if ('callbackQuery' in ctx.update) await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const branches = await this.svc.getBranches(a.tenantId);
+    if (!branches.length) { await this.send(ctx, i18n('branches_empty', l)); return; }
+
+    if (branches.length === 1) {
+      const b = branches[0] as any;
+      await this.svc.setState(this.chatId(ctx), 'pos_menu', { branchId: b.id, branchName: b.name, items: [] });
+      return this.showPosCart(ctx, l, b.name, []);
+    }
+    const btns = branches.map((b: any) =>
+      [Markup.button.callback(`🏢 ${b.name.substring(0, 30)}`, `posb:${b.id}:${b.name.substring(0, 20)}`)],
+    );
+    btns.push([Markup.button.callback(i18n('cancel', l), 'go_dashboard')]);
+    await this.send(ctx, i18n('select_branch', l), Markup.inlineKeyboard(btns));
+  }
+
+  @Action(/^posb:([^:]+):(.+)$/)
+  async onPosSelectBranch(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const branchId = ctx.match![1];
+    const branchName = ctx.match![2];
+    await this.svc.setState(this.chatId(ctx), 'pos_menu', { branchId, branchName, items: [] });
+    await this.showPosCart(ctx, l, branchName, []);
+  }
+
+  private async showPosCart(ctx: TgContext, l: Lang, branchName: string, items: any[]) {
+    let text = `${i18n('pos_title', l)}\n🏢 ${this.esc(branchName)}\n\n`;
+    if (!items.length) {
+      text += i18n('pos_cart_empty', l);
+    } else {
+      let total = 0;
+      items.forEach((item, i) => {
+        const sub = item.quantity * item.unitPrice;
+        total += sub;
+        text += `${i + 1}. ${this.esc(item.name)} x${item.quantity} = *${this.fmt(sub)}*\n`;
+      });
+      text += `\n${i18n('pos_total', l)}: *${this.fmt(total)}*`;
+    }
+    const btns: any[] = [];
+    btns.push([Markup.button.callback(i18n('pos_add_product', l), 'pos_browse')]);
+    if (items.length > 0) {
+      btns.push([
+        Markup.button.callback(i18n('pos_checkout', l), 'pos_checkout'),
+        Markup.button.callback(i18n('pos_clear_cart', l), 'pos_clear'),
+      ]);
+      // Allow removing individual items
+      items.forEach((item, i) => {
+        btns.push([Markup.button.callback(`❌ ${item.name.substring(0, 25)}`, `pos_rm:${i}`)]);
+      });
+    }
+    btns.push([Markup.button.callback(i18n('cancel', l), 'pos_cancel')]);
+    await this.send(ctx, text, Markup.inlineKeyboard(btns));
+  }
+
+  @Action('pos_browse')
+  async onPosBrowse(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const products = await this.svc.getProducts(a.tenantId);
+    if (!products.length) { await this.send(ctx, i18n('products_empty', l)); return; }
+    const btns = products.slice(0, 20).map(p =>
+      [Markup.button.callback(`${p.name.substring(0, 25)} — ${this.fmt(Number(p.sellingPrice))}`, `posadd:${p.id}`)],
+    );
+    btns.push([Markup.button.callback(i18n('back', l), 'pos_back_cart')]);
+    await this.send(ctx, i18n('select_product', l), Markup.inlineKeyboard(btns));
+  }
+
+  @Action(/^posadd:(.+)$/)
+  async onPosAddProduct(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const productId = ctx.match![1];
+    const product = await this.svc.getProduct(a.tenantId, productId);
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    const data = (tg?.stateData as any) || {};
+    await this.svc.setState(chatId, 'pos_qty', { ...data, selectedProductId: productId, selectedProductName: product.name, selectedProductPrice: Number(product.sellingPrice) });
+    await this.send(ctx, i18n('pos_enter_qty', l, { product: this.esc(product.name) }));
+  }
+
+  @Action('pos_back_cart')
+  async onPosBackCart(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const tg = await this.svc.getTelegramUser(this.chatId(ctx));
+    const data = (tg?.stateData as any) || {};
+    await this.svc.setState(this.chatId(ctx), 'pos_menu', data);
+    await this.showPosCart(ctx, l, data.branchName || '—', data.items || []);
+  }
+
+  @Action(/^pos_rm:(\d+)$/)
+  async onPosRemoveItem(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const idx = parseInt(ctx.match![1]);
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    const data = (tg?.stateData as any) || {};
+    const items = [...(data.items || [])];
+    items.splice(idx, 1);
+    await this.svc.setState(chatId, 'pos_menu', { ...data, items });
+    await this.showPosCart(ctx, l, data.branchName || '—', items);
+  }
+
+  @Action('pos_clear')
+  async onPosClear(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    const data = (tg?.stateData as any) || {};
+    await this.svc.setState(chatId, 'pos_menu', { ...data, items: [] });
+    await this.showPosCart(ctx, l, data.branchName || '—', []);
+  }
+
+  @Action('pos_cancel')
+  async onPosCancel(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    await this.svc.setState(this.chatId(ctx), 'idle');
+    const l = await this.lang(ctx);
+    await this.send(ctx, i18n('cancelled', l), this.mainMenu(l));
+  }
+
+  @Action('pos_checkout')
+  async onPosCheckout(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    const data = (tg?.stateData as any) || {};
+
+    // Optional: select client
+    const clients = await this.svc.getClients(a.tenantId);
+    const btns: any[] = [];
+    if (clients.length) {
+      btns.push(...clients.slice(0, 10).map((c: any) =>
+        [Markup.button.callback(`👤 ${c.fullName.substring(0, 30)}`, `posc:${c.id}`)],
+      ));
+    }
+    btns.push([Markup.button.callback(i18n('skip', l), 'posc:skip')]);
+    btns.push([Markup.button.callback(i18n('cancel', l), 'pos_back_cart')]);
+    await this.svc.setState(chatId, 'pos_client', data);
+    await this.send(ctx, i18n('pos_select_client', l), Markup.inlineKeyboard(btns));
+  }
+
+  @Action(/^posc:(.+)$/)
+  async onPosSelectClient(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    const data = (tg?.stateData as any) || {};
+    const clientId = ctx.match![1] === 'skip' ? undefined : ctx.match![1];
+    await this.svc.setState(chatId, 'pos_payment', { ...data, clientId });
+    await this.send(ctx, i18n('pos_select_payment', l), Markup.inlineKeyboard([
+      [Markup.button.callback(i18n('cash', l), 'pospm:cash')],
+      [Markup.button.callback(i18n('card', l), 'pospm:card')],
+      [Markup.button.callback(i18n('transfer', l), 'pospm:transfer')],
+      [Markup.button.callback(i18n('cancel', l), 'pos_back_cart')],
+    ]));
+  }
+
+  @Action(/^pospm:(.+)$/)
+  async onPosSelectPayment(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const l = await this.lang(ctx);
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    const data = (tg?.stateData as any) || {};
+    const items = data.items || [];
+    const total = items.reduce((s: number, it: any) => s + it.quantity * it.unitPrice, 0);
+    await this.svc.setState(chatId, 'pos_paid', { ...data, paymentMethod: ctx.match![1], total });
+    await this.send(ctx, `${i18n('pos_enter_paid', l)}\n${i18n('pos_total', l)}: *${this.fmt(total)}*`);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // TEXT HANDLER — state machine dispatch
+  // ══════════════════════════════════════════════════════════════════
+
+  @On('text')
+  async onText(@Ctx() ctx: TgContext) {
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    if (!tg) return;
+
+    const text = (ctx.message as any)?.text?.trim();
+    if (!text) return;
+    const l = (tg.language as Lang) ?? 'en';
+    const state = tg.state ?? 'idle';
+    const data = (tg.stateData as any) ?? {};
+
+    // ─── Cancel anywhere ────────────────────────────────────────────
+    if (text === i18n('cancel', l) || text === '/cancel') {
+      await this.svc.setState(chatId, 'idle');
+      await this.send(ctx, i18n('cancelled', l), this.mainMenu(l));
       return;
     }
 
-    const lines = transactions.slice(0, 15).map((t: any, i: number) => {
-      const date = new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `${i + 1}. 📥 ${date} — *${this.formatCurrency(Number(t.amount))}*${t.description ? ` — ${this.escMd(t.description)}` : ''}`;
-    });
+    // ─── Main menu keyboard buttons ─────────────────────────────────
+    const menuMap: Record<string, () => Promise<void>> = {
+      [i18n('btn_dashboard', l)]: () => this.onDashboard(ctx),
+      [i18n('btn_pos', l)]: () => this.onPosStart(ctx),
+      [i18n('btn_products', l)]: () => this.onProducts(ctx),
+      [i18n('btn_inventory', l)]: () => this.onInventory(ctx),
+      [i18n('btn_clients', l)]: () => this.onClients(ctx),
+      [i18n('btn_sales', l)]: () => this.onRecentSales(ctx),
+      [i18n('btn_finance', l)]: () => this.onFinancial(ctx),
+      [i18n('btn_debts', l)]: () => this.onDebts(ctx),
+      [i18n('btn_branches', l)]: () => this.onBranches(ctx),
+      [i18n('btn_categories', l)]: () => this.onCategories(ctx),
+      [i18n('btn_transactions', l)]: () => this.onTransactions(ctx),
+      [i18n('btn_settings', l)]: () => this.onSettings(ctx),
+      [i18n('btn_help', l)]: () => this.onHelp(ctx),
+    };
+    const handler = menuMap[text];
+    if (handler) { await handler(); return; }
 
-    await ctx.reply(`📥 *Income Transactions*\n\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
-  }
+    // ─── State-based input ──────────────────────────────────────────
+    const isSkip = text === '/skip';
 
-  @Action('txn_expense')
-  async onTxnExpense(@Ctx() ctx: TgContext) {
-    await ctx.answerCbQuery();
-    const auth = await this.requireAuth(ctx);
-    if (!auth) return;
+    switch (state) {
+      // ── Auth ──────────────────────────────────────────────────────
+      case 'awaiting_phone':
+        await this.handlePhoneLogin(ctx, chatId, text);
+        return;
 
-    const transactions = await this.telegramService.getTransactions(auth.tenantId, 'expense');
-    if (!transactions.length) {
-      await ctx.reply('No expense transactions found.');
-      return;
+      // ── Product Create flow ───────────────────────────────────────
+      case 'product_name':
+        await this.svc.setState(chatId, 'product_price', { ...data, name: text });
+        await this.send(ctx, i18n('enter_selling_price', l));
+        return;
+
+      case 'product_price': {
+        const price = parseFloat(text);
+        if (isNaN(price) || price <= 0) { await this.send(ctx, i18n('invalid_input', l)); return; }
+        await this.svc.setState(chatId, 'product_cost', { ...data, sellingPrice: price });
+        await this.send(ctx, i18n('enter_cost_price', l));
+        return;
+      }
+
+      case 'product_cost': {
+        const costPrice = isSkip ? undefined : parseFloat(text);
+        if (!isSkip && (isNaN(costPrice!) || costPrice! < 0)) { await this.send(ctx, i18n('invalid_input', l)); return; }
+        // Check if there are categories to select
+        const a = await this.auth(ctx);
+        if (!a) return;
+        const cats = await this.svc.getCategories(a.tenantId);
+        if (cats.length) {
+          await this.svc.setState(chatId, 'product_cat', { ...data, costPrice });
+          const btns = cats.map((c: any) =>
+            [Markup.button.callback(c.name.substring(0, 30), `prodcat:${c.id}`)],
+          );
+          btns.push([Markup.button.callback(i18n('skip', l), 'prodcat:skip')]);
+          await this.send(ctx, i18n('select_category', l), Markup.inlineKeyboard(btns));
+        } else {
+          // Create directly without category
+          try {
+            await this.svc.createProduct(a.tenantId, { name: data.name, sellingPrice: data.sellingPrice, costPrice });
+            await this.svc.setState(chatId, 'idle');
+            await this.send(ctx, i18n('created', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_products')]]));
+          } catch { await this.send(ctx, i18n('error', l)); }
+        }
+        return;
+      }
+
+      // ── Product Edit ──────────────────────────────────────────────
+      case 'product_edit': {
+        const a2 = await this.auth(ctx);
+        if (!a2) return;
+        const val: any = data.field === 'name' ? text : parseFloat(text);
+        if (data.field !== 'name' && (isNaN(val) || val < 0)) { await this.send(ctx, i18n('invalid_input', l)); return; }
+        try {
+          await this.svc.updateProduct(a2.tenantId, data.entityId, { [data.field]: val });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('updated', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), `pv:${data.entityId}`)]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── Product Search ────────────────────────────────────────────
+      case 'product_search': {
+        const a3 = await this.auth(ctx);
+        if (!a3) return;
+        await this.svc.setState(chatId, 'idle');
+        const products = await this.svc.getProducts(a3.tenantId, text);
+        if (!products.length) {
+          await this.send(ctx, i18n('not_found', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_products')]]));
+          return;
+        }
+        const list = products.slice(0, 20).map((p, i) =>
+          `${i + 1}. *${this.esc(p.name)}* — ${this.fmt(Number(p.sellingPrice))}`,
+        );
+        const btns = products.slice(0, 20).map(p =>
+          [Markup.button.callback(`📦 ${p.name.substring(0, 30)}`, `pv:${p.id}`)],
+        );
+        btns.push([Markup.button.callback(i18n('back', l), 'cmd_products')]);
+        await this.send(ctx, `🔍 *${this.esc(text)}*\n\n${list.join('\n')}`, Markup.inlineKeyboard(btns));
+        return;
+      }
+
+      // ── Client Create flow ────────────────────────────────────────
+      case 'client_name':
+        await this.svc.setState(chatId, 'client_phone', { ...data, fullName: text });
+        await this.send(ctx, i18n('enter_phone', l));
+        return;
+
+      case 'client_phone':
+        await this.svc.setState(chatId, 'client_address', { ...data, phone: isSkip ? undefined : text });
+        await this.send(ctx, i18n('enter_address', l));
+        return;
+
+      case 'client_address': {
+        const a4 = await this.auth(ctx);
+        if (!a4) return;
+        try {
+          await this.svc.createClient(a4.tenantId, { fullName: data.fullName, phone: data.phone, address: isSkip ? undefined : text });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('created', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_clients')]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── Client Edit ───────────────────────────────────────────────
+      case 'client_edit': {
+        const a5 = await this.auth(ctx);
+        if (!a5) return;
+        try {
+          await this.svc.updateClient(a5.tenantId, data.entityId, { [data.field]: text });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('updated', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), `cv:${data.entityId}`)]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── Branch Create flow ────────────────────────────────────────
+      case 'branch_name':
+        await this.svc.setState(chatId, 'branch_address', { ...data, name: text });
+        await this.send(ctx, i18n('enter_address', l));
+        return;
+
+      case 'branch_address':
+        await this.svc.setState(chatId, 'branch_phone', { ...data, address: isSkip ? undefined : text });
+        await this.send(ctx, i18n('enter_phone', l));
+        return;
+
+      case 'branch_phone': {
+        const a6 = await this.auth(ctx);
+        if (!a6) return;
+        try {
+          await this.svc.createBranch(a6.tenantId, { name: data.name, address: data.address, phone: isSkip ? undefined : text });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('created', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_branches')]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── Branch Edit ───────────────────────────────────────────────
+      case 'branch_edit': {
+        const a7 = await this.auth(ctx);
+        if (!a7) return;
+        try {
+          await this.svc.updateBranch(a7.tenantId, data.entityId, { [data.field]: text });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('updated', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), `bv:${data.entityId}`)]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── Category Create flow ──────────────────────────────────────
+      case 'cat_name':
+        await this.svc.setState(chatId, 'cat_desc', { ...data, name: text });
+        await this.send(ctx, i18n('enter_description', l));
+        return;
+
+      case 'cat_desc': {
+        const a8 = await this.auth(ctx);
+        if (!a8) return;
+        try {
+          await this.svc.createCategory(a8.tenantId, { name: data.name, description: isSkip ? undefined : text });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('created', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_categories')]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── Category Edit ─────────────────────────────────────────────
+      case 'cat_edit': {
+        const a9 = await this.auth(ctx);
+        if (!a9) return;
+        try {
+          await this.svc.updateCategory(a9.tenantId, data.entityId, { [data.field]: text });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('updated', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), `catv:${data.entityId}`)]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── Inventory Create flow ─────────────────────────────────────
+      case 'inv_qty': {
+        const qty = parseFloat(text);
+        if (isNaN(qty) || qty < 0) { await this.send(ctx, i18n('invalid_input', l)); return; }
+        await this.svc.setState(chatId, 'inv_min', { ...data, quantity: qty });
+        await this.send(ctx, i18n('enter_min_quantity', l));
+        return;
+      }
+
+      case 'inv_min': {
+        const a10 = await this.auth(ctx);
+        if (!a10) return;
+        const minQty = isSkip ? undefined : parseFloat(text);
+        if (!isSkip && (isNaN(minQty!) || minQty! < 0)) { await this.send(ctx, i18n('invalid_input', l)); return; }
+        try {
+          await this.svc.createInventory(a10.tenantId, { productId: data.productId, quantity: data.quantity, minQuantity: minQty });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('created', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_inventory')]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── Inventory Edit ────────────────────────────────────────────
+      case 'inv_edit': {
+        const val2 = parseFloat(text);
+        if (isNaN(val2) || val2 < 0) { await this.send(ctx, i18n('invalid_input', l)); return; }
+        try {
+          await this.svc.updateInventory(data.entityId, { [data.field]: val2 });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('updated', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), `invv:${data.entityId}`)]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── Transaction Create flow ───────────────────────────────────
+      case 'txn_amount': {
+        const amt = parseFloat(text);
+        if (isNaN(amt) || amt <= 0) { await this.send(ctx, i18n('invalid_input', l)); return; }
+        await this.svc.setState(chatId, 'txn_desc', { ...data, amount: amt });
+        await this.send(ctx, i18n('enter_description', l));
+        return;
+      }
+
+      case 'txn_desc': {
+        const a11 = await this.auth(ctx);
+        if (!a11) return;
+        try {
+          await this.svc.createTransaction(a11.tenantId, a11.userId, {
+            branchId: data.branchId,
+            type: data.type,
+            amount: data.amount,
+            description: isSkip ? undefined : text,
+          });
+          await this.svc.setState(chatId, 'idle');
+          await this.send(ctx, i18n('created', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_transactions')]]));
+        } catch { await this.send(ctx, i18n('error', l)); }
+        return;
+      }
+
+      // ── POS Quantity ──────────────────────────────────────────────
+      case 'pos_qty': {
+        const qty2 = parseInt(text, 10);
+        if (isNaN(qty2) || qty2 <= 0) { await this.send(ctx, i18n('invalid_input', l)); return; }
+        const items = [...(data.items || [])];
+        // Check if product already in cart, merge
+        const existIdx = items.findIndex((it: any) => it.productId === data.selectedProductId);
+        if (existIdx >= 0) {
+          items[existIdx].quantity += qty2;
+        } else {
+          items.push({
+            productId: data.selectedProductId,
+            name: data.selectedProductName,
+            unitPrice: data.selectedProductPrice,
+            quantity: qty2,
+          });
+        }
+        const newData = { branchId: data.branchId, branchName: data.branchName, items };
+        await this.svc.setState(chatId, 'pos_menu', newData);
+        await this.send(ctx, i18n('pos_item_added', l));
+        await this.showPosCart(ctx, l, data.branchName || '—', items);
+        return;
+      }
+
+      // ── POS Paid Amount ───────────────────────────────────────────
+      case 'pos_paid': {
+        const paidAmt = parseFloat(text);
+        if (isNaN(paidAmt) || paidAmt < 0) { await this.send(ctx, i18n('invalid_input', l)); return; }
+        const a12 = await this.auth(ctx);
+        if (!a12) return;
+        try {
+          const saleItems = (data.items || []).map((it: any) => ({
+            productId: it.productId,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+          }));
+          const sale = await this.svc.createSale(a12.tenantId, data.branchId, a12.userId, {
+            items: saleItems,
+            clientId: data.clientId,
+            paymentMethod: data.paymentMethod,
+            paidAmount: paidAmt,
+          }) as any;
+          await this.svc.setState(chatId, 'idle');
+          const total = data.total || saleItems.reduce((s: number, it: any) => s + it.quantity * it.unitPrice, 0);
+          await this.send(ctx, i18n('pos_sale_created', l, { total: this.fmt(total) }), this.mainMenu(l));
+        } catch (e) {
+          this.logger.error('POS sale error', e);
+          await this.send(ctx, i18n('error', l));
+        }
+        return;
+      }
     }
-
-    const lines = transactions.slice(0, 15).map((t: any, i: number) => {
-      const date = new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `${i + 1}. 📤 ${date} — *${this.formatCurrency(Number(t.amount))}*${t.description ? ` — ${this.escMd(t.description)}` : ''}`;
-    });
-
-    await ctx.reply(`📤 *Expense Transactions*\n\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
   }
 
-  // ─── Main Menu ────────────────────────────────────────────────────
-
-  private mainMenuKeyboard() {
-    return Markup.keyboard([
-      ['📊 Dashboard', '📈 Sales Report'],
-      ['📦 Products', '⚠️ Low Stock'],
-      ['💰 Financial', '📋 Debts'],
-      ['👥 Clients', '🏢 Branches'],
-      ['📒 Transactions', '📂 Categories'],
-      ['❓ Help'],
-    ]).resize();
-  }
-
-  // ─── Escape markdown helper ───────────────────────────────────────
-
-  private escMd(text: string): string {
-    if (!text) return '';
-    return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
+  // ═══ Product category selection during creation (inline callback) ══
+  @Action(/^prodcat:(.+)$/)
+  async onProductSelectCategory(@Ctx() ctx: TgContext) {
+    await ctx.answerCbQuery();
+    const a = await this.auth(ctx); if (!a) return;
+    const l = await this.lang(ctx);
+    const chatId = this.chatId(ctx);
+    const tg = await this.svc.getTelegramUser(chatId);
+    const data = (tg?.stateData as any) || {};
+    const categoryId = ctx.match![1] === 'skip' ? undefined : ctx.match![1];
+    try {
+      await this.svc.createProduct(a.tenantId, {
+        name: data.name,
+        sellingPrice: data.sellingPrice,
+        costPrice: data.costPrice,
+        categoryId,
+      });
+      await this.svc.setState(chatId, 'idle');
+      await this.send(ctx, i18n('created', l), Markup.inlineKeyboard([[Markup.button.callback(i18n('back', l), 'cmd_products')]]));
+    } catch { await this.send(ctx, i18n('error', l)); }
   }
 }
