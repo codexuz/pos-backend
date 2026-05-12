@@ -2156,6 +2156,7 @@ export const ClientTransactionScalarFieldEnum = {
   currency: 'currency',
   paymentMethod: 'paymentMethod',
   description: 'description',
+  dueDate: 'dueDate',
   createdAt: 'createdAt'
 } as const
 

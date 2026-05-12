@@ -44,6 +44,7 @@ export type ClientTransactionMinAggregateOutputType = {
   currency: $Enums.Currency | null
   paymentMethod: $Enums.PaymentMethod | null
   description: string | null
+  dueDate: Date | null
   createdAt: Date | null
 }
 
@@ -57,6 +58,7 @@ export type ClientTransactionMaxAggregateOutputType = {
   currency: $Enums.Currency | null
   paymentMethod: $Enums.PaymentMethod | null
   description: string | null
+  dueDate: Date | null
   createdAt: Date | null
 }
 
@@ -70,6 +72,7 @@ export type ClientTransactionCountAggregateOutputType = {
   currency: number
   paymentMethod: number
   description: number
+  dueDate: number
   createdAt: number
   _all: number
 }
@@ -93,6 +96,7 @@ export type ClientTransactionMinAggregateInputType = {
   currency?: true
   paymentMethod?: true
   description?: true
+  dueDate?: true
   createdAt?: true
 }
 
@@ -106,6 +110,7 @@ export type ClientTransactionMaxAggregateInputType = {
   currency?: true
   paymentMethod?: true
   description?: true
+  dueDate?: true
   createdAt?: true
 }
 
@@ -119,6 +124,7 @@ export type ClientTransactionCountAggregateInputType = {
   currency?: true
   paymentMethod?: true
   description?: true
+  dueDate?: true
   createdAt?: true
   _all?: true
 }
@@ -219,6 +225,7 @@ export type ClientTransactionGroupByOutputType = {
   currency: $Enums.Currency
   paymentMethod: $Enums.PaymentMethod | null
   description: string | null
+  dueDate: Date | null
   createdAt: Date
   _count: ClientTransactionCountAggregateOutputType | null
   _avg: ClientTransactionAvgAggregateOutputType | null
@@ -255,6 +262,7 @@ export type ClientTransactionWhereInput = {
   currency?: Prisma.EnumCurrencyFilter<"ClientTransaction"> | $Enums.Currency
   paymentMethod?: Prisma.EnumPaymentMethodNullableFilter<"ClientTransaction"> | $Enums.PaymentMethod | null
   description?: Prisma.StringNullableFilter<"ClientTransaction"> | string | null
+  dueDate?: Prisma.DateTimeNullableFilter<"ClientTransaction"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ClientTransaction"> | Date | string
   tenant?: Prisma.XOR<Prisma.TenantScalarRelationFilter, Prisma.TenantWhereInput>
   client?: Prisma.XOR<Prisma.ClientScalarRelationFilter, Prisma.ClientWhereInput>
@@ -271,6 +279,7 @@ export type ClientTransactionOrderByWithRelationInput = {
   currency?: Prisma.SortOrder
   paymentMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   tenant?: Prisma.TenantOrderByWithRelationInput
   client?: Prisma.ClientOrderByWithRelationInput
@@ -290,6 +299,7 @@ export type ClientTransactionWhereUniqueInput = Prisma.AtLeast<{
   currency?: Prisma.EnumCurrencyFilter<"ClientTransaction"> | $Enums.Currency
   paymentMethod?: Prisma.EnumPaymentMethodNullableFilter<"ClientTransaction"> | $Enums.PaymentMethod | null
   description?: Prisma.StringNullableFilter<"ClientTransaction"> | string | null
+  dueDate?: Prisma.DateTimeNullableFilter<"ClientTransaction"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ClientTransaction"> | Date | string
   tenant?: Prisma.XOR<Prisma.TenantScalarRelationFilter, Prisma.TenantWhereInput>
   client?: Prisma.XOR<Prisma.ClientScalarRelationFilter, Prisma.ClientWhereInput>
@@ -306,6 +316,7 @@ export type ClientTransactionOrderByWithAggregationInput = {
   currency?: Prisma.SortOrder
   paymentMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.ClientTransactionCountOrderByAggregateInput
   _avg?: Prisma.ClientTransactionAvgOrderByAggregateInput
@@ -327,6 +338,7 @@ export type ClientTransactionScalarWhereWithAggregatesInput = {
   currency?: Prisma.EnumCurrencyWithAggregatesFilter<"ClientTransaction"> | $Enums.Currency
   paymentMethod?: Prisma.EnumPaymentMethodNullableWithAggregatesFilter<"ClientTransaction"> | $Enums.PaymentMethod | null
   description?: Prisma.StringNullableWithAggregatesFilter<"ClientTransaction"> | string | null
+  dueDate?: Prisma.DateTimeNullableWithAggregatesFilter<"ClientTransaction"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ClientTransaction"> | Date | string
 }
 
@@ -337,6 +349,7 @@ export type ClientTransactionCreateInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
   tenant: Prisma.TenantCreateNestedOneWithoutClientTransactionsInput
   client: Prisma.ClientCreateNestedOneWithoutClientTransactionsInput
@@ -353,6 +366,7 @@ export type ClientTransactionUncheckedCreateInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -363,6 +377,7 @@ export type ClientTransactionUpdateInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tenant?: Prisma.TenantUpdateOneRequiredWithoutClientTransactionsNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutClientTransactionsNestedInput
@@ -379,6 +394,7 @@ export type ClientTransactionUncheckedUpdateInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -392,6 +408,7 @@ export type ClientTransactionCreateManyInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -402,6 +419,7 @@ export type ClientTransactionUpdateManyMutationInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -415,6 +433,7 @@ export type ClientTransactionUncheckedUpdateManyInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -438,6 +457,7 @@ export type ClientTransactionCountOrderByAggregateInput = {
   currency?: Prisma.SortOrder
   paymentMethod?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  dueDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -455,6 +475,7 @@ export type ClientTransactionMaxOrderByAggregateInput = {
   currency?: Prisma.SortOrder
   paymentMethod?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  dueDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -468,6 +489,7 @@ export type ClientTransactionMinOrderByAggregateInput = {
   currency?: Prisma.SortOrder
   paymentMethod?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  dueDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -616,6 +638,7 @@ export type ClientTransactionCreateWithoutTenantInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
   client: Prisma.ClientCreateNestedOneWithoutClientTransactionsInput
   user: Prisma.UserCreateNestedOneWithoutClientTransactionsInput
@@ -630,6 +653,7 @@ export type ClientTransactionUncheckedCreateWithoutTenantInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -672,6 +696,7 @@ export type ClientTransactionScalarWhereInput = {
   currency?: Prisma.EnumCurrencyFilter<"ClientTransaction"> | $Enums.Currency
   paymentMethod?: Prisma.EnumPaymentMethodNullableFilter<"ClientTransaction"> | $Enums.PaymentMethod | null
   description?: Prisma.StringNullableFilter<"ClientTransaction"> | string | null
+  dueDate?: Prisma.DateTimeNullableFilter<"ClientTransaction"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ClientTransaction"> | Date | string
 }
 
@@ -682,6 +707,7 @@ export type ClientTransactionCreateWithoutUserInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
   tenant: Prisma.TenantCreateNestedOneWithoutClientTransactionsInput
   client: Prisma.ClientCreateNestedOneWithoutClientTransactionsInput
@@ -696,6 +722,7 @@ export type ClientTransactionUncheckedCreateWithoutUserInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -732,6 +759,7 @@ export type ClientTransactionCreateWithoutClientInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
   tenant: Prisma.TenantCreateNestedOneWithoutClientTransactionsInput
   user: Prisma.UserCreateNestedOneWithoutClientTransactionsInput
@@ -746,6 +774,7 @@ export type ClientTransactionUncheckedCreateWithoutClientInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -784,6 +813,7 @@ export type ClientTransactionCreateManyTenantInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -794,6 +824,7 @@ export type ClientTransactionUpdateWithoutTenantInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   client?: Prisma.ClientUpdateOneRequiredWithoutClientTransactionsNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutClientTransactionsNestedInput
@@ -808,6 +839,7 @@ export type ClientTransactionUncheckedUpdateWithoutTenantInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -820,6 +852,7 @@ export type ClientTransactionUncheckedUpdateManyWithoutTenantInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -832,6 +865,7 @@ export type ClientTransactionCreateManyUserInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -842,6 +876,7 @@ export type ClientTransactionUpdateWithoutUserInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tenant?: Prisma.TenantUpdateOneRequiredWithoutClientTransactionsNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutClientTransactionsNestedInput
@@ -856,6 +891,7 @@ export type ClientTransactionUncheckedUpdateWithoutUserInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -868,6 +904,7 @@ export type ClientTransactionUncheckedUpdateManyWithoutUserInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -880,6 +917,7 @@ export type ClientTransactionCreateManyClientInput = {
   currency?: $Enums.Currency
   paymentMethod?: $Enums.PaymentMethod | null
   description?: string | null
+  dueDate?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -890,6 +928,7 @@ export type ClientTransactionUpdateWithoutClientInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tenant?: Prisma.TenantUpdateOneRequiredWithoutClientTransactionsNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutClientTransactionsNestedInput
@@ -904,6 +943,7 @@ export type ClientTransactionUncheckedUpdateWithoutClientInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -916,6 +956,7 @@ export type ClientTransactionUncheckedUpdateManyWithoutClientInput = {
   currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
   paymentMethod?: Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -931,6 +972,7 @@ export type ClientTransactionSelect<ExtArgs extends runtime.Types.Extensions.Int
   currency?: boolean
   paymentMethod?: boolean
   description?: boolean
+  dueDate?: boolean
   createdAt?: boolean
   tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
@@ -947,6 +989,7 @@ export type ClientTransactionSelectCreateManyAndReturn<ExtArgs extends runtime.T
   currency?: boolean
   paymentMethod?: boolean
   description?: boolean
+  dueDate?: boolean
   createdAt?: boolean
   tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
@@ -963,6 +1006,7 @@ export type ClientTransactionSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   currency?: boolean
   paymentMethod?: boolean
   description?: boolean
+  dueDate?: boolean
   createdAt?: boolean
   tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
@@ -979,10 +1023,11 @@ export type ClientTransactionSelectScalar = {
   currency?: boolean
   paymentMethod?: boolean
   description?: boolean
+  dueDate?: boolean
   createdAt?: boolean
 }
 
-export type ClientTransactionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tenantId" | "clientId" | "userId" | "type" | "amount" | "currency" | "paymentMethod" | "description" | "createdAt", ExtArgs["result"]["clientTransaction"]>
+export type ClientTransactionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tenantId" | "clientId" | "userId" | "type" | "amount" | "currency" | "paymentMethod" | "description" | "dueDate" | "createdAt", ExtArgs["result"]["clientTransaction"]>
 export type ClientTransactionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
@@ -1016,6 +1061,7 @@ export type $ClientTransactionPayload<ExtArgs extends runtime.Types.Extensions.I
     currency: $Enums.Currency
     paymentMethod: $Enums.PaymentMethod | null
     description: string | null
+    dueDate: Date | null
     createdAt: Date
   }, ExtArgs["result"]["clientTransaction"]>
   composites: {}
@@ -1452,6 +1498,7 @@ export interface ClientTransactionFieldRefs {
   readonly currency: Prisma.FieldRef<"ClientTransaction", 'Currency'>
   readonly paymentMethod: Prisma.FieldRef<"ClientTransaction", 'PaymentMethod'>
   readonly description: Prisma.FieldRef<"ClientTransaction", 'String'>
+  readonly dueDate: Prisma.FieldRef<"ClientTransaction", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ClientTransaction", 'DateTime'>
 }
     

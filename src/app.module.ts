@@ -27,6 +27,7 @@ import { ReportsModule } from './reports/reports.module';
 import { MinioModule } from './minio/minio.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { CronModule } from './cron/cron.module';
 import { JwtAuthGuard, RolesGuard, SubscriptionGuard, CustomThrottlerGuard } from './auth/guards';
 
 @Module({
@@ -56,6 +57,7 @@ import { JwtAuthGuard, RolesGuard, SubscriptionGuard, CustomThrottlerGuard } fro
     MinioModule,
     NotificationsModule,
     TelegramModule,
+    CronModule,
   ],
   controllers: [AppController],
   providers: [
