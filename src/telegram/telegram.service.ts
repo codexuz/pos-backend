@@ -272,4 +272,51 @@ export class TelegramService {
   async deleteTransaction(tenantId: string, transactionId: string) {
     return this.transactionsService.remove(transactionId, tenantId);
   }
+
+  // ─── Compatibility shims (telegram.update.ts still uses these names) ─
+
+  /** Alias → financialSummary */
+  async getSalesSummary(tenantId: string, from?: string, to?: string) {
+    return this.reportsService.financialSummary(tenantId, undefined, from, to);
+  }
+
+  /** Replaces old debtsService.summary — returns client outcome balance totals */
+  async getDebtSummary(tenantId: string) {
+    const balances = await this.reportsService.clientBalances(tenantId);
+    const totalDebt = balances.reduce((s, b) => s + (b.balanceUzs < 0 ? Math.abs(b.balanceUzs) : 0), 0);
+    return { totalDebt: +totalDebt.toFixed(2), clientCount: balances.length };
+  }
+
+  /** Replaces old debtsService.clientBalances */
+  async getClientBalances(tenantId: string) {
+    return this.reportsService.clientBalances(tenantId);
+  }
+
+  /** Replaces old salesService.findAll — returns recent transactions instead */
+  async getRecentSales(tenantId: string, limit = 10) {
+    return this.transactionsService.findAll(tenantId, undefined, undefined);
+  }
+
+  /** Replaces old salesService.create — creates a client income transaction */
+  async createSale(
+    tenantId: string,
+    branchId: string,
+    userId: string,
+    data: {
+      items?: { productId: string; quantity: number; unitPrice: number }[];
+      clientId?: string;
+      paidAmount?: number;
+      notes?: string;
+    },
+  ) {
+    const total = data.paidAmount ??
+      (data.items?.reduce((s, i) => s + i.quantity * i.unitPrice, 0) ?? 0);
+
+    return this.transactionsService.create(tenantId, userId, {
+      branchId,
+      type: 'income',
+      amount: total,
+      description: data.notes ?? 'POS transaction',
+    } as any);
+  }
 }
