@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SseService } from '../auth/sse.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private sseService: SseService,
+  ) {}
 
   async create(tenantId: string, dto: CreateUserDto) {
     const existing = await this.prisma.user.findFirst({
@@ -33,9 +37,9 @@ export class UsersService {
     });
   }
 
-  findAll(tenantId: string) {
+  findAll(tenantId: string, role?: string) {
     return this.prisma.user.findMany({
-      where: { tenantId },
+      where: { tenantId, ...(role && { role: role as any }) },
       select: {
         id: true, phone: true, fullName: true, role: true,
         branchId: true, language: true, isActive: true, createdAt: true,
@@ -81,10 +85,12 @@ export class UsersService {
 
   async remove(id: string, tenantId: string) {
     await this.findOne(id, tenantId);
-    return this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id },
       data: { isActive: false },
     });
+    this.sseService.emitUserDeactivated(id);
+    return user;
   }
 
   async changeLanguage(userId: string, language: 'en' | 'uz' | 'ru') {

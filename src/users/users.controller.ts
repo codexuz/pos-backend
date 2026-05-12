@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto, ChangeLanguageDto } from './dto';
 import { CurrentUser, Roles } from '../auth/decorators';
@@ -30,8 +30,12 @@ export class UsersController {
   @Get()
   @Roles('owner', 'super_admin')
   @ApiOperation({ summary: 'List all users' })
-  findAll(@CurrentUser('tenantId') tenantId: string) {
-    return this.service.findAll(tenantId);
+  @ApiQuery({ name: 'role', required: false, enum: ['owner', 'seller', 'super_admin'] })
+  findAll(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('role') role?: string,
+  ) {
+    return this.service.findAll(tenantId, role);
   }
 
   @Get(':id')

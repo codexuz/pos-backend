@@ -12,8 +12,16 @@ export class ClientsService {
     });
   }
 
-  findAll(tenantId: string, search?: string) {
-    return this.prisma.client.findMany({
+  async findAll(
+    tenantId: string,
+    search?: string,
+    sortBy?: 'createdAt' | 'clientTransAmount' | 'alphabetic',
+    order?: 'asc' | 'desc',
+  ) {
+    const sortField = sortBy || 'createdAt';
+    const sortOrder = order || 'desc';
+
+    const clients = await this.prisma.client.findMany({
       where: {
         tenantId,
         ...(search && {
@@ -23,8 +31,44 @@ export class ClientsService {
           ],
         }),
       },
-      orderBy: { createdAt: 'desc' },
+      include: {
+        clientTransactions: {
+          select: { amount: true, currency: true },
+        },
+      },
+      ...(sortField === 'createdAt' && {
+        orderBy: { createdAt: sortOrder },
+      }),
+      ...(sortField === 'alphabetic' && {
+        orderBy: { fullName: sortOrder },
+      }),
     });
+
+    const result = clients.map(({ clientTransactions, ...client }) => {
+      let totalAmountUzs = 0;
+      let totalAmountUsd = 0;
+
+      for (const tx of clientTransactions) {
+        if (tx.currency === 'UZS') totalAmountUzs += Number(tx.amount);
+        else totalAmountUsd += Number(tx.amount);
+      }
+
+      return {
+        ...client,
+        totalAmountUzs: +totalAmountUzs.toFixed(2),
+        totalAmountUsd: +totalAmountUsd.toFixed(6),
+      };
+    });
+
+    if (sortField === 'clientTransAmount') {
+      result.sort((a, b) => {
+        const totalA = a.totalAmountUzs + a.totalAmountUsd;
+        const totalB = b.totalAmountUzs + b.totalAmountUsd;
+        return sortOrder === 'asc' ? totalA - totalB : totalB - totalA;
+      });
+    }
+
+    return result;
   }
 
   async findOne(tenantId: string, id: string) {
@@ -35,7 +79,25 @@ export class ClientsService {
       },
     });
     if (!client) throw new NotFoundException('Client not found');
-    return client;
+
+    const allTransactions = await this.prisma.clientTransaction.findMany({
+      where: { tenantId, clientId: id },
+      select: { amount: true, currency: true },
+    });
+
+    let totalAmountUzs = 0;
+    let totalAmountUsd = 0;
+
+    for (const tx of allTransactions) {
+      if (tx.currency === 'UZS') totalAmountUzs += Number(tx.amount);
+      else totalAmountUsd += Number(tx.amount);
+    }
+
+    return {
+      ...client,
+      totalAmountUzs: +totalAmountUzs.toFixed(2),
+      totalAmountUsd: +totalAmountUsd.toFixed(6),
+    };
   }
 
   async update(tenantId: string, id: string, dto: UpdateClientDto) {

@@ -19,8 +19,15 @@ export class ClientsController {
   @Get()
   @ApiOperation({ summary: 'List clients' })
   @ApiQuery({ name: 'search', required: false })
-  findAll(@CurrentUser('tenantId') tenantId: string, @Query('search') search?: string) {
-    return this.service.findAll(tenantId, search);
+  @ApiQuery({ name: 'sortBy', required: false, enum: ['createdAt', 'clientTransAmount', 'alphabetic'] })
+  @ApiQuery({ name: 'order', required: false, enum: ['asc', 'desc'] })
+  findAll(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy?: 'createdAt' | 'clientTransAmount' | 'alphabetic',
+    @Query('order') order?: 'asc' | 'desc',
+  ) {
+    return this.service.findAll(tenantId, search, sortBy, order);
   }
 
   @Get(':id')
