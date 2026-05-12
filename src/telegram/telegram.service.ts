@@ -2,10 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsService } from '../reports/reports.service';
 import { ProductsService } from '../products/products.service';
-import { SalesService } from '../sales/sales.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { ClientsService } from '../clients/clients.service';
-import { DebtsService } from '../debts/debts.service';
 import { BranchesService } from '../branches/branches.service';
 import { CategoriesService } from '../categories/categories.service';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -19,10 +17,8 @@ export class TelegramService {
     private prisma: PrismaService,
     private reportsService: ReportsService,
     private productsService: ProductsService,
-    private salesService: SalesService,
     private inventoryService: InventoryService,
     private clientsService: ClientsService,
-    private debtsService: DebtsService,
     private branchesService: BranchesService,
     private categoriesService: CategoriesService,
     private transactionsService: TransactionsService,
@@ -120,17 +116,12 @@ export class TelegramService {
     today.setHours(0, 0, 0, 0);
     const from = today.toISOString();
 
-    const [salesSummary, financialSummary, debtSummary] = await Promise.all([
-      this.reportsService.salesSummary(tenantId, undefined, from),
+    const [financialSummary, inventoryReport] = await Promise.all([
       this.reportsService.financialSummary(tenantId, undefined, from),
-      this.debtsService.summary(tenantId),
+      this.reportsService.inventoryReport(tenantId),
     ]);
 
-    return { salesSummary, financialSummary, debtSummary };
-  }
-
-  async getSalesSummary(tenantId: string, from?: string, to?: string) {
-    return this.reportsService.salesSummary(tenantId, undefined, from, to);
+    return { financialSummary, inventoryReport };
   }
 
   async getFinancialSummary(tenantId: string, from?: string, to?: string) {
@@ -139,10 +130,6 @@ export class TelegramService {
 
   async getTopProducts(tenantId: string, limit = 10) {
     return this.reportsService.topProducts(tenantId, undefined, limit);
-  }
-
-  async getTopSellers(tenantId: string) {
-    return this.reportsService.topSellers(tenantId);
   }
 
   // ─── Products (CRUD) ─────────────────────────────────────────────
@@ -256,8 +243,8 @@ export class TelegramService {
     return this.inventoryService.create(tenantId, data as any);
   }
 
-  async updateInventory(id: string, data: { quantity?: number; minQuantity?: number }) {
-    return this.inventoryService.update(id, data as any);
+  async updateInventory(id: string, tenantId: string, userId: string, data: { quantity?: number; minQuantity?: number }) {
+    return this.inventoryService.adjust(id, tenantId, userId, data as any);
   }
 
   async deleteInventory(id: string) {
@@ -284,47 +271,5 @@ export class TelegramService {
 
   async deleteTransaction(tenantId: string, transactionId: string) {
     return this.transactionsService.remove(transactionId, tenantId);
-  }
-
-  // ─── Sales ────────────────────────────────────────────────────────
-
-  async getRecentSales(tenantId: string, limit = 10) {
-    const sales = await this.salesService.findAll(tenantId);
-    return sales.slice(0, limit);
-  }
-
-  async getSale(tenantId: string, saleId: string) {
-    return this.salesService.findOne(tenantId, saleId);
-  }
-
-  async createSale(tenantId: string, branchId: string, sellerId: string, data: {
-    items: { productId: string; quantity: number; unitPrice: number }[];
-    clientId?: string;
-    paymentMethod?: string;
-    paidAmount?: number;
-    notes?: string;
-  }) {
-    return this.salesService.create(tenantId, branchId, sellerId, {
-      branchId,
-      items: data.items,
-      clientId: data.clientId,
-      paymentMethod: data.paymentMethod as any,
-      paidAmount: data.paidAmount,
-      notes: data.notes,
-    } as any);
-  }
-
-  // ─── Debts (Read-only) ───────────────────────────────────────────
-
-  async getDebtSummary(tenantId: string) {
-    return this.debtsService.summary(tenantId);
-  }
-
-  async getDebts(tenantId: string) {
-    return this.debtsService.findAll(tenantId);
-  }
-
-  async getClientBalances(tenantId: string) {
-    return this.debtsService.clientBalances(tenantId);
   }
 }

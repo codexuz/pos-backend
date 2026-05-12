@@ -51,6 +51,7 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  ExchangeRate: 'ExchangeRate',
   SubscriptionPlan: 'SubscriptionPlan',
   Tenant: 'Tenant',
   Branch: 'Branch',
@@ -58,13 +59,16 @@ export const ModelName = {
   Session: 'Session',
   Unit: 'Unit',
   Category: 'Category',
+  BrandCategory: 'BrandCategory',
   Product: 'Product',
   Inventory: 'Inventory',
+  InventoryMovement: 'InventoryMovement',
   Client: 'Client',
-  Sale: 'Sale',
-  SaleItem: 'SaleItem',
-  Payment: 'Payment',
+  Supplier: 'Supplier',
+  ClientTransaction: 'ClientTransaction',
+  SupplierTransaction: 'SupplierTransaction',
   ExpenseCategory: 'ExpenseCategory',
+  IncomeCategory: 'IncomeCategory',
   Transaction: 'Transaction',
   TelegramUser: 'TelegramUser'
 } as const
@@ -83,6 +87,16 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const ExchangeRateScalarFieldEnum = {
+  id: 'id',
+  date: 'date',
+  usdToUzs: 'usdToUzs',
+  createdAt: 'createdAt'
+} as const
+
+export type ExchangeRateScalarFieldEnum = (typeof ExchangeRateScalarFieldEnum)[keyof typeof ExchangeRateScalarFieldEnum]
 
 
 export const SubscriptionPlanScalarFieldEnum = {
@@ -186,17 +200,28 @@ export const CategoryScalarFieldEnum = {
 export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
 
 
+export const BrandCategoryScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  name: 'name',
+  description: 'description',
+  createdAt: 'createdAt'
+} as const
+
+export type BrandCategoryScalarFieldEnum = (typeof BrandCategoryScalarFieldEnum)[keyof typeof BrandCategoryScalarFieldEnum]
+
+
 export const ProductScalarFieldEnum = {
   id: 'id',
   tenantId: 'tenantId',
   categoryId: 'categoryId',
+  brandCategoryId: 'brandCategoryId',
   unitId: 'unitId',
   name: 'name',
   description: 'description',
-  sku: 'sku',
-  barcode: 'barcode',
   costPrice: 'costPrice',
   sellingPrice: 'sellingPrice',
+  currency: 'currency',
   imageUrl: 'imageUrl',
   isActive: 'isActive',
   createdAt: 'createdAt',
@@ -210,12 +235,34 @@ export const InventoryScalarFieldEnum = {
   id: 'id',
   productId: 'productId',
   tenantId: 'tenantId',
+  supplierId: 'supplierId',
   quantity: 'quantity',
   minQuantity: 'minQuantity',
+  maxQuantity: 'maxQuantity',
+  costPrice: 'costPrice',
+  costCurrency: 'costCurrency',
+  location: 'location',
   updatedAt: 'updatedAt'
 } as const
 
 export type InventoryScalarFieldEnum = (typeof InventoryScalarFieldEnum)[keyof typeof InventoryScalarFieldEnum]
+
+
+export const InventoryMovementScalarFieldEnum = {
+  id: 'id',
+  inventoryId: 'inventoryId',
+  tenantId: 'tenantId',
+  branchId: 'branchId',
+  userId: 'userId',
+  type: 'type',
+  quantity: 'quantity',
+  before: 'before',
+  after: 'after',
+  note: 'note',
+  createdAt: 'createdAt'
+} as const
+
+export type InventoryMovementScalarFieldEnum = (typeof InventoryMovementScalarFieldEnum)[keyof typeof InventoryMovementScalarFieldEnum]
 
 
 export const ClientScalarFieldEnum = {
@@ -231,47 +278,51 @@ export const ClientScalarFieldEnum = {
 export type ClientScalarFieldEnum = (typeof ClientScalarFieldEnum)[keyof typeof ClientScalarFieldEnum]
 
 
-export const SaleScalarFieldEnum = {
+export const SupplierScalarFieldEnum = {
   id: 'id',
   tenantId: 'tenantId',
-  branchId: 'branchId',
-  sellerId: 'sellerId',
+  name: 'name',
+  phone: 'phone',
+  address: 'address',
+  notes: 'notes',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SupplierScalarFieldEnum = (typeof SupplierScalarFieldEnum)[keyof typeof SupplierScalarFieldEnum]
+
+
+export const ClientTransactionScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
   clientId: 'clientId',
-  totalAmount: 'totalAmount',
-  sellerProfitAmount: 'sellerProfitAmount',
-  finalAmount: 'finalAmount',
-  paidAmount: 'paidAmount',
-  paymentStatus: 'paymentStatus',
-  notes: 'notes',
+  userId: 'userId',
+  type: 'type',
+  amount: 'amount',
+  currency: 'currency',
+  paymentMethod: 'paymentMethod',
+  description: 'description',
   createdAt: 'createdAt'
 } as const
 
-export type SaleScalarFieldEnum = (typeof SaleScalarFieldEnum)[keyof typeof SaleScalarFieldEnum]
+export type ClientTransactionScalarFieldEnum = (typeof ClientTransactionScalarFieldEnum)[keyof typeof ClientTransactionScalarFieldEnum]
 
 
-export const SaleItemScalarFieldEnum = {
-  id: 'id',
-  saleId: 'saleId',
-  productId: 'productId',
-  quantity: 'quantity',
-  unitPrice: 'unitPrice',
-  totalPrice: 'totalPrice'
-} as const
-
-export type SaleItemScalarFieldEnum = (typeof SaleItemScalarFieldEnum)[keyof typeof SaleItemScalarFieldEnum]
-
-
-export const PaymentScalarFieldEnum = {
+export const SupplierTransactionScalarFieldEnum = {
   id: 'id',
   tenantId: 'tenantId',
-  saleId: 'saleId',
+  supplierId: 'supplierId',
+  userId: 'userId',
+  type: 'type',
   amount: 'amount',
+  currency: 'currency',
   paymentMethod: 'paymentMethod',
-  notes: 'notes',
+  description: 'description',
   createdAt: 'createdAt'
 } as const
 
-export type PaymentScalarFieldEnum = (typeof PaymentScalarFieldEnum)[keyof typeof PaymentScalarFieldEnum]
+export type SupplierTransactionScalarFieldEnum = (typeof SupplierTransactionScalarFieldEnum)[keyof typeof SupplierTransactionScalarFieldEnum]
 
 
 export const ExpenseCategoryScalarFieldEnum = {
@@ -284,6 +335,16 @@ export const ExpenseCategoryScalarFieldEnum = {
 export type ExpenseCategoryScalarFieldEnum = (typeof ExpenseCategoryScalarFieldEnum)[keyof typeof ExpenseCategoryScalarFieldEnum]
 
 
+export const IncomeCategoryScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  name: 'name',
+  createdAt: 'createdAt'
+} as const
+
+export type IncomeCategoryScalarFieldEnum = (typeof IncomeCategoryScalarFieldEnum)[keyof typeof IncomeCategoryScalarFieldEnum]
+
+
 export const TransactionScalarFieldEnum = {
   id: 'id',
   tenantId: 'tenantId',
@@ -291,7 +352,9 @@ export const TransactionScalarFieldEnum = {
   userId: 'userId',
   type: 'type',
   amount: 'amount',
+  currency: 'currency',
   expenseCategoryId: 'expenseCategoryId',
+  incomeCategoryId: 'incomeCategoryId',
   description: 'description',
   createdAt: 'createdAt'
 } as const

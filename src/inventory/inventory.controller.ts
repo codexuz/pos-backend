@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
 import { CreateInventoryDto, UpdateInventoryDto } from './dto';
 import { CurrentUser } from '../auth/decorators';
@@ -23,21 +23,36 @@ export class InventoryController {
   }
 
   @Get('low-stock')
-  @ApiOperation({ summary: 'Get low stock items for a tenant' })
+  @ApiOperation({ summary: 'Get low-stock items' })
   findLowStock(@CurrentUser('tenantId') tenantId: string) {
     return this.service.findLowStock(tenantId);
   }
 
+  @Get('movements')
+  @ApiOperation({ summary: 'List inventory movements (full history)' })
+  @ApiQuery({ name: 'inventoryId', required: false })
+  getMovements(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('inventoryId') inventoryId?: string,
+  ) {
+    return this.service.getMovements(tenantId, inventoryId);
+  }
+
   @Get(':id')
-  @ApiOperation({ summary: 'Get inventory record by ID' })
+  @ApiOperation({ summary: 'Get inventory record by ID (includes last 20 movements)' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update inventory quantity' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateInventoryDto) {
-    return this.service.update(id, dto);
+  @ApiOperation({ summary: 'Adjust inventory (quantity change auto-creates a movement record)' })
+  adjust(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateInventoryDto,
+  ) {
+    return this.service.adjust(id, tenantId, userId, dto);
   }
 
   @Delete(':id')

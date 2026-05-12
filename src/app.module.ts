@@ -12,15 +12,18 @@ import { BranchesModule } from './branches/branches.module';
 import { UsersModule } from './users/users.module';
 import { UnitsModule } from './units/units.module';
 import { CategoriesModule } from './categories/categories.module';
+import { BrandCategoriesModule } from './brand-categories/brand-categories.module';
 import { ProductsModule } from './products/products.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { ClientsModule } from './clients/clients.module';
-import { SalesModule } from './sales/sales.module';
-import { PaymentsModule } from './payments/payments.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
+import { ClientTransactionsModule } from './client-transactions/client-transactions.module';
+import { SupplierTransactionsModule } from './supplier-transactions/supplier-transactions.module';
 import { ExpenseCategoriesModule } from './expense-categories/expense-categories.module';
+import { IncomeCategoriesModule } from './income-categories/income-categories.module';
 import { TransactionsModule } from './transactions/transactions.module';
+import { ExchangeRatesModule } from './exchange-rates/exchange-rates.module';
 import { ReportsModule } from './reports/reports.module';
-import { DebtsModule } from './debts/debts.module';
 import { MinioModule } from './minio/minio.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TelegramModule } from './telegram/telegram.module';
@@ -38,15 +41,18 @@ import { JwtAuthGuard, RolesGuard, SubscriptionGuard, CustomThrottlerGuard } fro
     UsersModule,
     UnitsModule,
     CategoriesModule,
+    BrandCategoriesModule,
     ProductsModule,
     InventoryModule,
     ClientsModule,
-    SalesModule,
-    PaymentsModule,
+    SuppliersModule,
+    ClientTransactionsModule,
+    SupplierTransactionsModule,
     ExpenseCategoriesModule,
+    IncomeCategoriesModule,
     TransactionsModule,
+    ExchangeRatesModule,
     ReportsModule,
-    DebtsModule,
     MinioModule,
     NotificationsModule,
     TelegramModule,

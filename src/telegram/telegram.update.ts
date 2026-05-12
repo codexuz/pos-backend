@@ -471,8 +471,7 @@ export class TelegramUpdate {
         `${i18n('product_name', l)}: *${this.esc(p.name)}*\n` +
         `${i18n('selling_price', l)}: *${this.fmt(Number(p.sellingPrice))}*\n` +
         `${i18n('cost_price', l)}: ${p.costPrice ? this.fmt(Number(p.costPrice)) : '—'}\n` +
-        `${i18n('product_sku', l)}: ${p.sku || '—'}\n` +
-        `${i18n('product_barcode', l)}: ${p.barcode || '—'}\n` +
+        `${i18n('currency', l)}: ${(p as any).currency || 'UZS'}\n` +
         `${i18n('stock', l)}: ${(p as any).inventory?.quantity ?? '—'}`,
         Markup.inlineKeyboard([
           [

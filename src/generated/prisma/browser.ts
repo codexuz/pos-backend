@@ -18,6 +18,11 @@ export { Prisma }
 export * as $Enums from './enums'
 export * from './enums';
 /**
+ * Model ExchangeRate
+ * 
+ */
+export type ExchangeRate = Prisma.ExchangeRateModel
+/**
  * Model SubscriptionPlan
  * 
  */
@@ -53,6 +58,11 @@ export type Unit = Prisma.UnitModel
  */
 export type Category = Prisma.CategoryModel
 /**
+ * Model BrandCategory
+ * 
+ */
+export type BrandCategory = Prisma.BrandCategoryModel
+/**
  * Model Product
  * 
  */
@@ -63,30 +73,40 @@ export type Product = Prisma.ProductModel
  */
 export type Inventory = Prisma.InventoryModel
 /**
+ * Model InventoryMovement
+ * 
+ */
+export type InventoryMovement = Prisma.InventoryMovementModel
+/**
  * Model Client
  * 
  */
 export type Client = Prisma.ClientModel
 /**
- * Model Sale
+ * Model Supplier
  * 
  */
-export type Sale = Prisma.SaleModel
+export type Supplier = Prisma.SupplierModel
 /**
- * Model SaleItem
+ * Model ClientTransaction
  * 
  */
-export type SaleItem = Prisma.SaleItemModel
+export type ClientTransaction = Prisma.ClientTransactionModel
 /**
- * Model Payment
+ * Model SupplierTransaction
  * 
  */
-export type Payment = Prisma.PaymentModel
+export type SupplierTransaction = Prisma.SupplierTransactionModel
 /**
  * Model ExpenseCategory
  * 
  */
 export type ExpenseCategory = Prisma.ExpenseCategoryModel
+/**
+ * Model IncomeCategory
+ * 
+ */
+export type IncomeCategory = Prisma.IncomeCategoryModel
 /**
  * Model Transaction
  * 

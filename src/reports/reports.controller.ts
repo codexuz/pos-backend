@@ -11,70 +11,6 @@ import { UserRole } from '../generated/prisma/client';
 export class ReportsController {
   constructor(private service: ReportsService) {}
 
-  @Get('sales-summary')
-  @ApiOperation({ summary: 'Sales summary (total, paid, outstanding)' })
-  @ApiQuery({ name: 'branchId', required: false })
-  @ApiQuery({ name: 'from', required: false, description: 'ISO date string' })
-  @ApiQuery({ name: 'to', required: false, description: 'ISO date string' })
-  salesSummary(
-    @CurrentUser('tenantId') tenantId: string,
-    @Query('branchId') branchId?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
-    return this.service.salesSummary(tenantId, branchId, from, to);
-  }
-
-  @Get('sales-by-day')
-  @ApiOperation({ summary: 'Sales grouped by day' })
-  @ApiQuery({ name: 'branchId', required: false })
-  @ApiQuery({ name: 'from', required: false })
-  @ApiQuery({ name: 'to', required: false })
-  salesByDay(
-    @CurrentUser('tenantId') tenantId: string,
-    @Query('branchId') branchId?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
-    return this.service.salesByDay(tenantId, branchId, from, to);
-  }
-
-  @Get('top-products')
-  @ApiOperation({ summary: 'Top selling products by revenue' })
-  @ApiQuery({ name: 'branchId', required: false })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  topProducts(
-    @CurrentUser('tenantId') tenantId: string,
-    @Query('branchId') branchId?: string,
-    @Query('limit') limit?: string,
-  ) {
-    return this.service.topProducts(tenantId, branchId, limit ? parseInt(limit, 10) : undefined);
-  }
-
-  @Get('top-sellers')
-  @ApiOperation({ summary: 'Top sellers by revenue' })
-  @ApiQuery({ name: 'branchId', required: false })
-  @ApiQuery({ name: 'from', required: false })
-  @ApiQuery({ name: 'to', required: false })
-  topSellers(
-    @CurrentUser('tenantId') tenantId: string,
-    @Query('branchId') branchId?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
-    return this.service.topSellers(tenantId, branchId, from, to);
-  }
-
-  @Get('inventory')
-  @ApiOperation({ summary: 'Inventory report with stock values and low-stock items' })
-  @ApiQuery({ name: 'branchId', required: false })
-  inventoryReport(
-    @CurrentUser('tenantId') tenantId: string,
-    @Query('branchId') branchId?: string,
-  ) {
-    return this.service.inventoryReport(tenantId, branchId);
-  }
-
   @Get('financial-summary')
   @ApiOperation({ summary: 'Financial summary (income, expenses, net profit)' })
   @ApiQuery({ name: 'branchId', required: false })
@@ -89,6 +25,20 @@ export class ReportsController {
     return this.service.financialSummary(tenantId, branchId, from, to);
   }
 
+  @Get('transactions-by-day')
+  @ApiOperation({ summary: 'Transactions grouped by day (income & expenses)' })
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'from', required: false })
+  @ApiQuery({ name: 'to', required: false })
+  transactionsByDay(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('branchId') branchId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.service.transactionsByDay(tenantId, branchId, from, to);
+  }
+
   @Get('expenses-by-category')
   @ApiOperation({ summary: 'Expenses grouped by category' })
   @ApiQuery({ name: 'branchId', required: false })
@@ -101,5 +51,47 @@ export class ReportsController {
     @Query('to') to?: string,
   ) {
     return this.service.expensesByCategory(tenantId, branchId, from, to);
+  }
+
+  @Get('income-by-category')
+  @ApiOperation({ summary: 'Income grouped by category' })
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'from', required: false })
+  @ApiQuery({ name: 'to', required: false })
+  incomeByCategory(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('branchId') branchId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.service.incomeByCategory(tenantId, branchId, from, to);
+  }
+
+  @Get('inventory')
+  @ApiOperation({ summary: 'Inventory report with stock values and low-stock items' })
+  inventoryReport(@CurrentUser('tenantId') tenantId: string) {
+    return this.service.inventoryReport(tenantId);
+  }
+
+  @Get('client-balances')
+  @ApiOperation({ summary: 'All client income/outcome balances' })
+  clientBalances(@CurrentUser('tenantId') tenantId: string) {
+    return this.service.clientBalances(tenantId);
+  }
+
+  @Get('supplier-balances')
+  @ApiOperation({ summary: 'All supplier income/outcome balances' })
+  supplierBalances(@CurrentUser('tenantId') tenantId: string) {
+    return this.service.supplierBalances(tenantId);
+  }
+
+  @Get('top-products')
+  @ApiOperation({ summary: 'Active products list' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  topProducts(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.service.topProducts(tenantId, undefined, limit ? parseInt(limit, 10) : undefined);
   }
 }

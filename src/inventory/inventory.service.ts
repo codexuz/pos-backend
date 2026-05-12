@@ -16,8 +16,8 @@ export class InventoryService {
     return this.prisma.inventory.create({
       data: { ...dto, tenantId } as any,
       include: {
-        product: { select: { id: true, name: true, sku: true } },
-        tenant: { select: { id: true, name: true } },
+        product: { select: { id: true, name: true } },
+        supplier: { select: { id: true, name: true } },
       },
     });
   }
@@ -27,51 +27,104 @@ export class InventoryService {
       where: { tenantId },
       include: {
         product: {
-          select: { id: true, name: true, sku: true, barcode: true, sellingPrice: true, unit: true },
+          select: { id: true, name: true, sellingPrice: true, currency: true, unit: true },
         },
+        supplier: { select: { id: true, name: true } },
       },
       orderBy: { product: { name: 'asc' } },
     });
   }
 
   findLowStock(tenantId: string) {
-    return this.prisma.$queryRaw`
-      SELECT i.*, p.name as product_name, p.sku
-      FROM inventory i
-      JOIN products p ON p.id = i.product_id
-      WHERE i.tenant_id = ${tenantId}::uuid
-        AND i.quantity <= i.min_quantity
-      ORDER BY i.quantity ASC
-    `;
+    return this.prisma.inventory.findMany({
+      where: {
+        tenantId,
+        minQuantity: { not: null },
+      },
+      include: {
+        product: { select: { id: true, name: true, unit: true } },
+        supplier: { select: { id: true, name: true } },
+      },
+      orderBy: { quantity: 'asc' },
+    }).then(items =>
+      items.filter(item => item.minQuantity !== null && item.quantity <= item.minQuantity),
+    );
   }
 
   async findOne(id: string) {
     const inventory = await this.prisma.inventory.findUnique({
       where: { id },
       include: {
-        product: { select: { id: true, name: true, sku: true } },
-        tenant: { select: { id: true, name: true } },
+        product: { select: { id: true, name: true } },
+        supplier: { select: { id: true, name: true } },
+        movements: {
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+          include: { user: { select: { id: true, fullName: true } } },
+        },
       },
     });
     if (!inventory) throw new NotFoundException('Inventory record not found');
     return inventory;
   }
 
-  async update(id: string, dto: UpdateInventoryDto) {
+  async adjust(
+    id: string,
+    tenantId: string,
+    userId: string,
+    dto: UpdateInventoryDto & { note?: string },
+  ) {
     const inventory = await this.findOne(id);
+    const { note, quantity, ...rest } = dto as any;
+
+    const beforeQty = inventory.quantity;
+
     const updated = await this.prisma.inventory.update({
       where: { id },
-      data: dto as any,
+      data: rest as any,
       include: {
-        product: { select: { id: true, name: true, sku: true } },
-        tenant: { select: { id: true, name: true } },
+        product: { select: { id: true, name: true } },
+        supplier: { select: { id: true, name: true } },
       },
     });
 
-    // Check low stock after manual update
-    this.checkAndNotifyLowStock(inventory.tenantId, [updated.productId]).catch(
-      (err) => this.logger.error('Failed to send low-stock notification', err),
-    );
+    // Record a movement if quantity changed
+    if (quantity !== undefined && Number(quantity) !== Number(beforeQty)) {
+      const after = Number(quantity);
+      const before = Number(beforeQty);
+      const diff = after - before;
+      const type = diff > 0 ? 'in' : diff < 0 ? 'out' : 'adjustment';
+
+      await this.prisma.inventoryMovement.create({
+        data: {
+          inventoryId: id,
+          tenantId,
+          userId,
+          type,
+          quantity: Math.abs(diff),
+          before,
+          after,
+          note: note ?? null,
+        },
+      });
+
+      // Fire low-stock notification asynchronously
+      this.checkAndNotifyLowStock(tenantId, [inventory.productId]).catch(
+        (err) => this.logger.error('Failed to send low-stock notification', err),
+      );
+    }
+
+    // Re-fetch with updated quantity if it was changed
+    if (quantity !== undefined) {
+      return this.prisma.inventory.update({
+        where: { id },
+        data: { quantity },
+        include: {
+          product: { select: { id: true, name: true } },
+          supplier: { select: { id: true, name: true } },
+        },
+      });
+    }
 
     return updated;
   }
@@ -81,16 +134,30 @@ export class InventoryService {
     return this.prisma.inventory.delete({ where: { id } });
   }
 
+  getMovements(tenantId: string, inventoryId?: string) {
+    return this.prisma.inventoryMovement.findMany({
+      where: {
+        tenantId,
+        ...(inventoryId && { inventoryId }),
+      },
+      include: {
+        inventory: {
+          include: { product: { select: { id: true, name: true } } },
+        },
+        user: { select: { id: true, fullName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   /**
    * Check if any of the given products are low in stock and notify the tenant owner.
-   * Call this after any operation that decreases inventory (sales, manual updates, etc.)
    */
   async checkAndNotifyLowStock(tenantId: string, productIds: string[]): Promise<void> {
     if (productIds.length === 0) return;
 
     const { getLowStockMessage } = await import('../notifications/notification-messages');
 
-    // Find inventory records where quantity <= minQuantity
     const lowStockItems = await this.prisma.inventory.findMany({
       where: {
         tenantId,
@@ -98,18 +165,16 @@ export class InventoryService {
         minQuantity: { not: null },
       },
       include: {
-        product: { select: { id: true, name: true, sku: true } },
+        product: { select: { id: true, name: true } },
       },
     });
 
-    // Filter to only items actually below threshold
     const alertItems = lowStockItems.filter(
       (item) => item.minQuantity !== null && Number(item.quantity) <= Number(item.minQuantity),
     );
 
     if (alertItems.length === 0) return;
 
-    // Find tenant owner with language preference
     const owner = await this.prisma.user.findFirst({
       where: { tenantId, role: 'owner', isActive: true },
       select: { id: true, expoPushToken: true, language: true },
@@ -125,9 +190,10 @@ export class InventoryService {
 
     await this.notifications.sendToUser(owner.id, {
       title: msg.title,
-      body: alertItems.length === 1
-        ? msg.single(alertItems[0].product.name, Number(alertItems[0].quantity))
-        : msg.multi(alertItems.length, itemsList),
+      body:
+        alertItems.length === 1
+          ? msg.single(alertItems[0].product.name, Number(alertItems[0].quantity))
+          : msg.multi(alertItems.length, itemsList),
       data: { type: 'low_stock', productIds: alertItems.map((i) => i.product.id) },
     });
   }

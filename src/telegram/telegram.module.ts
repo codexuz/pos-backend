@@ -6,10 +6,8 @@ import { TelegramUpdate } from './telegram.update';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ReportsModule } from '../reports/reports.module';
 import { ProductsModule } from '../products/products.module';
-import { SalesModule } from '../sales/sales.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { ClientsModule } from '../clients/clients.module';
-import { DebtsModule } from '../debts/debts.module';
 import { BranchesModule } from '../branches/branches.module';
 import { CategoriesModule } from '../categories/categories.module';
 import { TransactionsModule } from '../transactions/transactions.module';
@@ -42,10 +40,8 @@ import { TransactionsModule } from '../transactions/transactions.module';
     PrismaModule,
     ReportsModule,
     ProductsModule,
-    SalesModule,
     InventoryModule,
     ClientsModule,
-    DebtsModule,
     BranchesModule,
     CategoriesModule,
     TransactionsModule,

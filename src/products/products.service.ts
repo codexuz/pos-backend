@@ -31,7 +31,7 @@ export class ProductsService {
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.create({
         data: { ...productData, tenantId } as any,
-        include: { category: true, unit: true },
+        include: { category: true, brandCategory: true, unit: true },
       });
 
       await tx.inventory.create({
@@ -45,12 +45,12 @@ export class ProductsService {
 
       const created = await tx.product.findUnique({
         where: { id: product.id },
-        include: { category: true, unit: true, inventory: true },
+        include: { category: true, brandCategory: true, unit: true, inventory: true },
       });
       const inventory = created.inventory && created.inventory.length > 0 ? created.inventory[0] : null;
       return this.resolveImageUrl({
         ...created,
-        inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock'
+        inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock',
       });
     });
   }
@@ -63,18 +63,17 @@ export class ProductsService {
         ...(search && {
           OR: [
             { name: { contains: search, mode: 'insensitive' as const } },
-            { sku: { contains: search, mode: 'insensitive' as const } },
-            { barcode: { contains: search, mode: 'insensitive' as const } },
+            { description: { contains: search, mode: 'insensitive' as const } },
           ],
         }),
       },
-      include: { category: true, unit: true, inventory: true },
+      include: { category: true, brandCategory: true, unit: true, inventory: true },
       orderBy: { createdAt: 'desc' },
     }).then(products => Promise.all(products.map(async product => {
       const inventory = product.inventory && product.inventory.length > 0 ? product.inventory[0] : null;
       return this.resolveImageUrl({
         ...product,
-        inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock'
+        inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock',
       });
     })));
   }
@@ -84,6 +83,7 @@ export class ProductsService {
       where: { id, tenantId },
       include: {
         category: true,
+        brandCategory: true,
         unit: true,
         inventory: true,
       },
@@ -92,7 +92,7 @@ export class ProductsService {
     const inventory = product.inventory && product.inventory.length > 0 ? product.inventory[0] : null;
     return this.resolveImageUrl({
       ...product,
-      inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock'
+      inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock',
     });
   }
 
@@ -101,7 +101,7 @@ export class ProductsService {
     const updated = await this.prisma.product.update({
       where: { id },
       data: dto as any,
-      include: { category: true, unit: true },
+      include: { category: true, brandCategory: true, unit: true },
     });
     return this.resolveImageUrl(updated);
   }
@@ -130,7 +130,7 @@ export class ProductsService {
     const updated = await this.prisma.product.update({
       where: { id },
       data: { imageUrl: objectName },
-      include: { category: true, unit: true },
+      include: { category: true, brandCategory: true, unit: true },
     });
     return this.resolveImageUrl(updated);
   }
@@ -145,7 +145,7 @@ export class ProductsService {
     return this.prisma.product.update({
       where: { id },
       data: { imageUrl: null },
-      include: { category: true, unit: true },
+      include: { category: true, brandCategory: true, unit: true },
     });
   }
 

@@ -38,16 +38,6 @@ export const PaymentMethod = {
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod]
 
 
-export const PaymentStatus = {
-  pending: 'pending',
-  partial: 'partial',
-  paid: 'paid',
-  refunded: 'refunded'
-} as const
-
-export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus]
-
-
 export const TransactionType = {
   income: 'income',
   expense: 'expense'
@@ -63,3 +53,28 @@ export const Language = {
 } as const
 
 export type Language = (typeof Language)[keyof typeof Language]
+
+
+export const Currency = {
+  UZS: 'UZS',
+  USD: 'USD'
+} as const
+
+export type Currency = (typeof Currency)[keyof typeof Currency]
+
+
+export const InventoryMovementType = {
+  in: 'in',
+  out: 'out',
+  adjustment: 'adjustment'
+} as const
+
+export type InventoryMovementType = (typeof InventoryMovementType)[keyof typeof InventoryMovementType]
+
+
+export const PartyTransactionType = {
+  income: 'income',
+  outcome: 'outcome'
+} as const
+
+export type PartyTransactionType = (typeof PartyTransactionType)[keyof typeof PartyTransactionType]
