@@ -2493,7 +2493,7 @@ export type SaleItemScalarFieldEnum = (typeof SaleItemScalarFieldEnum)[keyof typ
 export const TelegramUserScalarFieldEnum = {
   id: 'id',
   chatId: 'chatId',
-  userId: 'userId',
+  clientId: 'clientId',
   tenantId: 'tenantId',
   phone: 'phone',
   language: 'language',

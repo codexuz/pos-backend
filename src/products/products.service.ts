@@ -55,11 +55,13 @@ export class ProductsService {
     });
   }
 
-  findAll(tenantId: string, search?: string) {
+  findAll(tenantId: string, search?: string, categoryId?: string, brandCategoryId?: string) {
     return this.prisma.product.findMany({
       where: {
         tenantId,
         isActive: true,
+        ...(categoryId && { categoryId }),
+        ...(brandCategoryId && { brandCategoryId }),
         ...(search && {
           OR: [
             { name: { contains: search, mode: 'insensitive' as const } },

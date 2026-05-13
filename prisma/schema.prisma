@@ -352,6 +352,7 @@ model Client {
   tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clientTransactions ClientTransaction[]
   sales              Sale[]
+  telegramUsers      TelegramUser[]
 
   @@map("clients")
 }
@@ -548,7 +549,7 @@ model SaleItem {
 model TelegramUser {
   id        String   @id @default(uuid()) @db.Uuid
   chatId    String   @unique @map("chat_id")
-  userId    String?  @map("user_id") @db.Uuid
+  clientId  String?  @map("client_id") @db.Uuid
   tenantId  String?  @map("tenant_id") @db.Uuid
   phone     String?
   language  Language @default(en)
@@ -556,6 +557,8 @@ model TelegramUser {
   stateData Json?    @map("state_data")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@map("telegram_users")
 }

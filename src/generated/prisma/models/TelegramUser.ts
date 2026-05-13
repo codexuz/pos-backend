@@ -27,7 +27,7 @@ export type AggregateTelegramUser = {
 export type TelegramUserMinAggregateOutputType = {
   id: string | null
   chatId: string | null
-  userId: string | null
+  clientId: string | null
   tenantId: string | null
   phone: string | null
   language: $Enums.Language | null
@@ -39,7 +39,7 @@ export type TelegramUserMinAggregateOutputType = {
 export type TelegramUserMaxAggregateOutputType = {
   id: string | null
   chatId: string | null
-  userId: string | null
+  clientId: string | null
   tenantId: string | null
   phone: string | null
   language: $Enums.Language | null
@@ -51,7 +51,7 @@ export type TelegramUserMaxAggregateOutputType = {
 export type TelegramUserCountAggregateOutputType = {
   id: number
   chatId: number
-  userId: number
+  clientId: number
   tenantId: number
   phone: number
   language: number
@@ -66,7 +66,7 @@ export type TelegramUserCountAggregateOutputType = {
 export type TelegramUserMinAggregateInputType = {
   id?: true
   chatId?: true
-  userId?: true
+  clientId?: true
   tenantId?: true
   phone?: true
   language?: true
@@ -78,7 +78,7 @@ export type TelegramUserMinAggregateInputType = {
 export type TelegramUserMaxAggregateInputType = {
   id?: true
   chatId?: true
-  userId?: true
+  clientId?: true
   tenantId?: true
   phone?: true
   language?: true
@@ -90,7 +90,7 @@ export type TelegramUserMaxAggregateInputType = {
 export type TelegramUserCountAggregateInputType = {
   id?: true
   chatId?: true
-  userId?: true
+  clientId?: true
   tenantId?: true
   phone?: true
   language?: true
@@ -176,7 +176,7 @@ export type TelegramUserGroupByArgs<ExtArgs extends runtime.Types.Extensions.Int
 export type TelegramUserGroupByOutputType = {
   id: string
   chatId: string
-  userId: string | null
+  clientId: string | null
   tenantId: string | null
   phone: string | null
   language: $Enums.Language
@@ -210,7 +210,7 @@ export type TelegramUserWhereInput = {
   NOT?: Prisma.TelegramUserWhereInput | Prisma.TelegramUserWhereInput[]
   id?: Prisma.UuidFilter<"TelegramUser"> | string
   chatId?: Prisma.StringFilter<"TelegramUser"> | string
-  userId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
+  clientId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
   tenantId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
   phone?: Prisma.StringNullableFilter<"TelegramUser"> | string | null
   language?: Prisma.EnumLanguageFilter<"TelegramUser"> | $Enums.Language
@@ -218,12 +218,13 @@ export type TelegramUserWhereInput = {
   stateData?: Prisma.JsonNullableFilter<"TelegramUser">
   createdAt?: Prisma.DateTimeFilter<"TelegramUser"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"TelegramUser"> | Date | string
+  client?: Prisma.XOR<Prisma.ClientNullableScalarRelationFilter, Prisma.ClientWhereInput> | null
 }
 
 export type TelegramUserOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   chatId?: Prisma.SortOrder
-  userId?: Prisma.SortOrderInput | Prisma.SortOrder
+  clientId?: Prisma.SortOrderInput | Prisma.SortOrder
   tenantId?: Prisma.SortOrderInput | Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
   language?: Prisma.SortOrder
@@ -231,6 +232,7 @@ export type TelegramUserOrderByWithRelationInput = {
   stateData?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  client?: Prisma.ClientOrderByWithRelationInput
 }
 
 export type TelegramUserWhereUniqueInput = Prisma.AtLeast<{
@@ -239,7 +241,7 @@ export type TelegramUserWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.TelegramUserWhereInput | Prisma.TelegramUserWhereInput[]
   OR?: Prisma.TelegramUserWhereInput[]
   NOT?: Prisma.TelegramUserWhereInput | Prisma.TelegramUserWhereInput[]
-  userId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
+  clientId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
   tenantId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
   phone?: Prisma.StringNullableFilter<"TelegramUser"> | string | null
   language?: Prisma.EnumLanguageFilter<"TelegramUser"> | $Enums.Language
@@ -247,12 +249,13 @@ export type TelegramUserWhereUniqueInput = Prisma.AtLeast<{
   stateData?: Prisma.JsonNullableFilter<"TelegramUser">
   createdAt?: Prisma.DateTimeFilter<"TelegramUser"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"TelegramUser"> | Date | string
+  client?: Prisma.XOR<Prisma.ClientNullableScalarRelationFilter, Prisma.ClientWhereInput> | null
 }, "id" | "chatId">
 
 export type TelegramUserOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   chatId?: Prisma.SortOrder
-  userId?: Prisma.SortOrderInput | Prisma.SortOrder
+  clientId?: Prisma.SortOrderInput | Prisma.SortOrder
   tenantId?: Prisma.SortOrderInput | Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
   language?: Prisma.SortOrder
@@ -271,7 +274,7 @@ export type TelegramUserScalarWhereWithAggregatesInput = {
   NOT?: Prisma.TelegramUserScalarWhereWithAggregatesInput | Prisma.TelegramUserScalarWhereWithAggregatesInput[]
   id?: Prisma.UuidWithAggregatesFilter<"TelegramUser"> | string
   chatId?: Prisma.StringWithAggregatesFilter<"TelegramUser"> | string
-  userId?: Prisma.UuidNullableWithAggregatesFilter<"TelegramUser"> | string | null
+  clientId?: Prisma.UuidNullableWithAggregatesFilter<"TelegramUser"> | string | null
   tenantId?: Prisma.UuidNullableWithAggregatesFilter<"TelegramUser"> | string | null
   phone?: Prisma.StringNullableWithAggregatesFilter<"TelegramUser"> | string | null
   language?: Prisma.EnumLanguageWithAggregatesFilter<"TelegramUser"> | $Enums.Language
@@ -284,7 +287,6 @@ export type TelegramUserScalarWhereWithAggregatesInput = {
 export type TelegramUserCreateInput = {
   id?: string
   chatId: string
-  userId?: string | null
   tenantId?: string | null
   phone?: string | null
   language?: $Enums.Language
@@ -292,12 +294,13 @@ export type TelegramUserCreateInput = {
   stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
+  client?: Prisma.ClientCreateNestedOneWithoutTelegramUsersInput
 }
 
 export type TelegramUserUncheckedCreateInput = {
   id?: string
   chatId: string
-  userId?: string | null
+  clientId?: string | null
   tenantId?: string | null
   phone?: string | null
   language?: $Enums.Language
@@ -310,7 +313,6 @@ export type TelegramUserUncheckedCreateInput = {
 export type TelegramUserUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   chatId?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
@@ -318,12 +320,13 @@ export type TelegramUserUpdateInput = {
   stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  client?: Prisma.ClientUpdateOneWithoutTelegramUsersNestedInput
 }
 
 export type TelegramUserUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   chatId?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  clientId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
@@ -336,7 +339,7 @@ export type TelegramUserUncheckedUpdateInput = {
 export type TelegramUserCreateManyInput = {
   id?: string
   chatId: string
-  userId?: string | null
+  clientId?: string | null
   tenantId?: string | null
   phone?: string | null
   language?: $Enums.Language
@@ -349,7 +352,6 @@ export type TelegramUserCreateManyInput = {
 export type TelegramUserUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   chatId?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
@@ -362,7 +364,7 @@ export type TelegramUserUpdateManyMutationInput = {
 export type TelegramUserUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   chatId?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  clientId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
@@ -372,10 +374,20 @@ export type TelegramUserUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type TelegramUserListRelationFilter = {
+  every?: Prisma.TelegramUserWhereInput
+  some?: Prisma.TelegramUserWhereInput
+  none?: Prisma.TelegramUserWhereInput
+}
+
+export type TelegramUserOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
+}
+
 export type TelegramUserCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   chatId?: Prisma.SortOrder
-  userId?: Prisma.SortOrder
+  clientId?: Prisma.SortOrder
   tenantId?: Prisma.SortOrder
   phone?: Prisma.SortOrder
   language?: Prisma.SortOrder
@@ -388,7 +400,7 @@ export type TelegramUserCountOrderByAggregateInput = {
 export type TelegramUserMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   chatId?: Prisma.SortOrder
-  userId?: Prisma.SortOrder
+  clientId?: Prisma.SortOrder
   tenantId?: Prisma.SortOrder
   phone?: Prisma.SortOrder
   language?: Prisma.SortOrder
@@ -400,7 +412,7 @@ export type TelegramUserMaxOrderByAggregateInput = {
 export type TelegramUserMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   chatId?: Prisma.SortOrder
-  userId?: Prisma.SortOrder
+  clientId?: Prisma.SortOrder
   tenantId?: Prisma.SortOrder
   phone?: Prisma.SortOrder
   language?: Prisma.SortOrder
@@ -409,12 +421,168 @@ export type TelegramUserMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
 }
 
+export type TelegramUserCreateNestedManyWithoutClientInput = {
+  create?: Prisma.XOR<Prisma.TelegramUserCreateWithoutClientInput, Prisma.TelegramUserUncheckedCreateWithoutClientInput> | Prisma.TelegramUserCreateWithoutClientInput[] | Prisma.TelegramUserUncheckedCreateWithoutClientInput[]
+  connectOrCreate?: Prisma.TelegramUserCreateOrConnectWithoutClientInput | Prisma.TelegramUserCreateOrConnectWithoutClientInput[]
+  createMany?: Prisma.TelegramUserCreateManyClientInputEnvelope
+  connect?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+}
+
+export type TelegramUserUncheckedCreateNestedManyWithoutClientInput = {
+  create?: Prisma.XOR<Prisma.TelegramUserCreateWithoutClientInput, Prisma.TelegramUserUncheckedCreateWithoutClientInput> | Prisma.TelegramUserCreateWithoutClientInput[] | Prisma.TelegramUserUncheckedCreateWithoutClientInput[]
+  connectOrCreate?: Prisma.TelegramUserCreateOrConnectWithoutClientInput | Prisma.TelegramUserCreateOrConnectWithoutClientInput[]
+  createMany?: Prisma.TelegramUserCreateManyClientInputEnvelope
+  connect?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+}
+
+export type TelegramUserUpdateManyWithoutClientNestedInput = {
+  create?: Prisma.XOR<Prisma.TelegramUserCreateWithoutClientInput, Prisma.TelegramUserUncheckedCreateWithoutClientInput> | Prisma.TelegramUserCreateWithoutClientInput[] | Prisma.TelegramUserUncheckedCreateWithoutClientInput[]
+  connectOrCreate?: Prisma.TelegramUserCreateOrConnectWithoutClientInput | Prisma.TelegramUserCreateOrConnectWithoutClientInput[]
+  upsert?: Prisma.TelegramUserUpsertWithWhereUniqueWithoutClientInput | Prisma.TelegramUserUpsertWithWhereUniqueWithoutClientInput[]
+  createMany?: Prisma.TelegramUserCreateManyClientInputEnvelope
+  set?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+  disconnect?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+  delete?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+  connect?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+  update?: Prisma.TelegramUserUpdateWithWhereUniqueWithoutClientInput | Prisma.TelegramUserUpdateWithWhereUniqueWithoutClientInput[]
+  updateMany?: Prisma.TelegramUserUpdateManyWithWhereWithoutClientInput | Prisma.TelegramUserUpdateManyWithWhereWithoutClientInput[]
+  deleteMany?: Prisma.TelegramUserScalarWhereInput | Prisma.TelegramUserScalarWhereInput[]
+}
+
+export type TelegramUserUncheckedUpdateManyWithoutClientNestedInput = {
+  create?: Prisma.XOR<Prisma.TelegramUserCreateWithoutClientInput, Prisma.TelegramUserUncheckedCreateWithoutClientInput> | Prisma.TelegramUserCreateWithoutClientInput[] | Prisma.TelegramUserUncheckedCreateWithoutClientInput[]
+  connectOrCreate?: Prisma.TelegramUserCreateOrConnectWithoutClientInput | Prisma.TelegramUserCreateOrConnectWithoutClientInput[]
+  upsert?: Prisma.TelegramUserUpsertWithWhereUniqueWithoutClientInput | Prisma.TelegramUserUpsertWithWhereUniqueWithoutClientInput[]
+  createMany?: Prisma.TelegramUserCreateManyClientInputEnvelope
+  set?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+  disconnect?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+  delete?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+  connect?: Prisma.TelegramUserWhereUniqueInput | Prisma.TelegramUserWhereUniqueInput[]
+  update?: Prisma.TelegramUserUpdateWithWhereUniqueWithoutClientInput | Prisma.TelegramUserUpdateWithWhereUniqueWithoutClientInput[]
+  updateMany?: Prisma.TelegramUserUpdateManyWithWhereWithoutClientInput | Prisma.TelegramUserUpdateManyWithWhereWithoutClientInput[]
+  deleteMany?: Prisma.TelegramUserScalarWhereInput | Prisma.TelegramUserScalarWhereInput[]
+}
+
+export type TelegramUserCreateWithoutClientInput = {
+  id?: string
+  chatId: string
+  tenantId?: string | null
+  phone?: string | null
+  language?: $Enums.Language
+  state?: string | null
+  stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type TelegramUserUncheckedCreateWithoutClientInput = {
+  id?: string
+  chatId: string
+  tenantId?: string | null
+  phone?: string | null
+  language?: $Enums.Language
+  state?: string | null
+  stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type TelegramUserCreateOrConnectWithoutClientInput = {
+  where: Prisma.TelegramUserWhereUniqueInput
+  create: Prisma.XOR<Prisma.TelegramUserCreateWithoutClientInput, Prisma.TelegramUserUncheckedCreateWithoutClientInput>
+}
+
+export type TelegramUserCreateManyClientInputEnvelope = {
+  data: Prisma.TelegramUserCreateManyClientInput | Prisma.TelegramUserCreateManyClientInput[]
+  skipDuplicates?: boolean
+}
+
+export type TelegramUserUpsertWithWhereUniqueWithoutClientInput = {
+  where: Prisma.TelegramUserWhereUniqueInput
+  update: Prisma.XOR<Prisma.TelegramUserUpdateWithoutClientInput, Prisma.TelegramUserUncheckedUpdateWithoutClientInput>
+  create: Prisma.XOR<Prisma.TelegramUserCreateWithoutClientInput, Prisma.TelegramUserUncheckedCreateWithoutClientInput>
+}
+
+export type TelegramUserUpdateWithWhereUniqueWithoutClientInput = {
+  where: Prisma.TelegramUserWhereUniqueInput
+  data: Prisma.XOR<Prisma.TelegramUserUpdateWithoutClientInput, Prisma.TelegramUserUncheckedUpdateWithoutClientInput>
+}
+
+export type TelegramUserUpdateManyWithWhereWithoutClientInput = {
+  where: Prisma.TelegramUserScalarWhereInput
+  data: Prisma.XOR<Prisma.TelegramUserUpdateManyMutationInput, Prisma.TelegramUserUncheckedUpdateManyWithoutClientInput>
+}
+
+export type TelegramUserScalarWhereInput = {
+  AND?: Prisma.TelegramUserScalarWhereInput | Prisma.TelegramUserScalarWhereInput[]
+  OR?: Prisma.TelegramUserScalarWhereInput[]
+  NOT?: Prisma.TelegramUserScalarWhereInput | Prisma.TelegramUserScalarWhereInput[]
+  id?: Prisma.UuidFilter<"TelegramUser"> | string
+  chatId?: Prisma.StringFilter<"TelegramUser"> | string
+  clientId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
+  tenantId?: Prisma.UuidNullableFilter<"TelegramUser"> | string | null
+  phone?: Prisma.StringNullableFilter<"TelegramUser"> | string | null
+  language?: Prisma.EnumLanguageFilter<"TelegramUser"> | $Enums.Language
+  state?: Prisma.StringNullableFilter<"TelegramUser"> | string | null
+  stateData?: Prisma.JsonNullableFilter<"TelegramUser">
+  createdAt?: Prisma.DateTimeFilter<"TelegramUser"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"TelegramUser"> | Date | string
+}
+
+export type TelegramUserCreateManyClientInput = {
+  id?: string
+  chatId: string
+  tenantId?: string | null
+  phone?: string | null
+  language?: $Enums.Language
+  state?: string | null
+  stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type TelegramUserUpdateWithoutClientInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  chatId?: Prisma.StringFieldUpdateOperationsInput | string
+  tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type TelegramUserUncheckedUpdateWithoutClientInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  chatId?: Prisma.StringFieldUpdateOperationsInput | string
+  tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type TelegramUserUncheckedUpdateManyWithoutClientInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  chatId?: Prisma.StringFieldUpdateOperationsInput | string
+  tenantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  language?: Prisma.EnumLanguageFieldUpdateOperationsInput | $Enums.Language
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stateData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 
 
 export type TelegramUserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   chatId?: boolean
-  userId?: boolean
+  clientId?: boolean
   tenantId?: boolean
   phone?: boolean
   language?: boolean
@@ -422,12 +590,13 @@ export type TelegramUserSelect<ExtArgs extends runtime.Types.Extensions.Internal
   stateData?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  client?: boolean | Prisma.TelegramUser$clientArgs<ExtArgs>
 }, ExtArgs["result"]["telegramUser"]>
 
 export type TelegramUserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   chatId?: boolean
-  userId?: boolean
+  clientId?: boolean
   tenantId?: boolean
   phone?: boolean
   language?: boolean
@@ -435,12 +604,13 @@ export type TelegramUserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   stateData?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  client?: boolean | Prisma.TelegramUser$clientArgs<ExtArgs>
 }, ExtArgs["result"]["telegramUser"]>
 
 export type TelegramUserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   chatId?: boolean
-  userId?: boolean
+  clientId?: boolean
   tenantId?: boolean
   phone?: boolean
   language?: boolean
@@ -448,12 +618,13 @@ export type TelegramUserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   stateData?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  client?: boolean | Prisma.TelegramUser$clientArgs<ExtArgs>
 }, ExtArgs["result"]["telegramUser"]>
 
 export type TelegramUserSelectScalar = {
   id?: boolean
   chatId?: boolean
-  userId?: boolean
+  clientId?: boolean
   tenantId?: boolean
   phone?: boolean
   language?: boolean
@@ -463,15 +634,26 @@ export type TelegramUserSelectScalar = {
   updatedAt?: boolean
 }
 
-export type TelegramUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "chatId" | "userId" | "tenantId" | "phone" | "language" | "state" | "stateData" | "createdAt" | "updatedAt", ExtArgs["result"]["telegramUser"]>
+export type TelegramUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "chatId" | "clientId" | "tenantId" | "phone" | "language" | "state" | "stateData" | "createdAt" | "updatedAt", ExtArgs["result"]["telegramUser"]>
+export type TelegramUserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  client?: boolean | Prisma.TelegramUser$clientArgs<ExtArgs>
+}
+export type TelegramUserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  client?: boolean | Prisma.TelegramUser$clientArgs<ExtArgs>
+}
+export type TelegramUserIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  client?: boolean | Prisma.TelegramUser$clientArgs<ExtArgs>
+}
 
 export type $TelegramUserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "TelegramUser"
-  objects: {}
+  objects: {
+    client: Prisma.$ClientPayload<ExtArgs> | null
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     chatId: string
-    userId: string | null
+    clientId: string | null
     tenantId: string | null
     phone: string | null
     language: $Enums.Language
@@ -873,6 +1055,7 @@ readonly fields: TelegramUserFieldRefs;
  */
 export interface Prisma__TelegramUserClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  client<T extends Prisma.TelegramUser$clientArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TelegramUser$clientArgs<ExtArgs>>): Prisma.Prisma__ClientClient<runtime.Types.Result.GetResult<Prisma.$ClientPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -904,7 +1087,7 @@ export interface Prisma__TelegramUserClient<T, Null = never, ExtArgs extends run
 export interface TelegramUserFieldRefs {
   readonly id: Prisma.FieldRef<"TelegramUser", 'String'>
   readonly chatId: Prisma.FieldRef<"TelegramUser", 'String'>
-  readonly userId: Prisma.FieldRef<"TelegramUser", 'String'>
+  readonly clientId: Prisma.FieldRef<"TelegramUser", 'String'>
   readonly tenantId: Prisma.FieldRef<"TelegramUser", 'String'>
   readonly phone: Prisma.FieldRef<"TelegramUser", 'String'>
   readonly language: Prisma.FieldRef<"TelegramUser", 'Language'>
@@ -929,6 +1112,10 @@ export type TelegramUserFindUniqueArgs<ExtArgs extends runtime.Types.Extensions.
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
+  /**
    * Filter, which TelegramUser to fetch.
    */
   where: Prisma.TelegramUserWhereUniqueInput
@@ -947,6 +1134,10 @@ export type TelegramUserFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Exte
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
+  /**
    * Filter, which TelegramUser to fetch.
    */
   where: Prisma.TelegramUserWhereUniqueInput
@@ -964,6 +1155,10 @@ export type TelegramUserFindFirstArgs<ExtArgs extends runtime.Types.Extensions.I
    * Omit specific fields from the TelegramUser
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
   /**
    * Filter, which TelegramUser to fetch.
    */
@@ -1013,6 +1208,10 @@ export type TelegramUserFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Exten
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
+  /**
    * Filter, which TelegramUser to fetch.
    */
   where?: Prisma.TelegramUserWhereInput
@@ -1060,6 +1259,10 @@ export type TelegramUserFindManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * Omit specific fields from the TelegramUser
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
   /**
    * Filter, which TelegramUsers to fetch.
    */
@@ -1109,6 +1312,10 @@ export type TelegramUserCreateArgs<ExtArgs extends runtime.Types.Extensions.Inte
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
+  /**
    * The data needed to create a TelegramUser.
    */
   data: Prisma.XOR<Prisma.TelegramUserCreateInput, Prisma.TelegramUserUncheckedCreateInput>
@@ -1142,6 +1349,10 @@ export type TelegramUserCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Ex
    */
   data: Prisma.TelegramUserCreateManyInput | Prisma.TelegramUserCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1156,6 +1367,10 @@ export type TelegramUserUpdateArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Omit specific fields from the TelegramUser
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
   /**
    * The data needed to update a TelegramUser.
    */
@@ -1208,6 +1423,10 @@ export type TelegramUserUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Ex
    * Limit how many TelegramUsers to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1222,6 +1441,10 @@ export type TelegramUserUpsertArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Omit specific fields from the TelegramUser
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
   /**
    * The filter to search for the TelegramUser to update in case it exists.
    */
@@ -1249,6 +1472,10 @@ export type TelegramUserDeleteArgs<ExtArgs extends runtime.Types.Extensions.Inte
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
+  /**
    * Filter which TelegramUser to delete.
    */
   where: Prisma.TelegramUserWhereUniqueInput
@@ -1269,6 +1496,25 @@ export type TelegramUserDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
 }
 
 /**
+ * TelegramUser.client
+ */
+export type TelegramUser$clientArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Client
+   */
+  select?: Prisma.ClientSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Client
+   */
+  omit?: Prisma.ClientOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ClientInclude<ExtArgs> | null
+  where?: Prisma.ClientWhereInput
+}
+
+/**
  * TelegramUser without action
  */
 export type TelegramUserDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1280,4 +1526,8 @@ export type TelegramUserDefaultArgs<ExtArgs extends runtime.Types.Extensions.Int
    * Omit specific fields from the TelegramUser
    */
   omit?: Prisma.TelegramUserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TelegramUserInclude<ExtArgs> | null
 }

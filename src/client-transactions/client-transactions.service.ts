@@ -1,13 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
+import { TelegramService } from '../telegram/telegram.service';
 import { CreateClientTransactionDto } from './dto';
 
 @Injectable()
 export class ClientTransactionsService {
+  private readonly logger = new Logger(ClientTransactionsService.name);
+
   constructor(
     private prisma: PrismaService,
     private minioService: MinioService,
+    @Optional() private telegram: TelegramService,
   ) {}
 
   async create(tenantId: string, userId: string, dto: CreateClientTransactionDto) {
@@ -16,13 +20,48 @@ export class ClientTransactionsService {
     });
     if (!client) throw new NotFoundException('Client not found');
 
-    return this.prisma.clientTransaction.create({
+    const tx = await this.prisma.clientTransaction.create({
       data: { ...dto, tenantId, userId } as any,
       include: {
         client: { select: { id: true, fullName: true, phone: true } },
         user: { select: { id: true, fullName: true } },
       },
     });
+
+    // Push Telegram notification to the client if they have a linked account
+    if (this.telegram) {
+      const date = this.telegram.fmtDate(tx.createdAt);
+      const amount = Number(tx.amount);
+      const currency = tx.currency as string;
+
+      this.telegram
+        .getClientBalance(tenantId, dto.clientId)
+        .then(({ balanceUzs, balanceUsd }) => {
+          if ((tx.type as string) === 'income') {
+            // Payment received — client's debt went down
+            return this.telegram.notifyClientPaymentReceived(dto.clientId, {
+              date,
+              amount,
+              currency,
+              balanceUzs,
+              balanceUsd,
+            });
+          } else {
+            // New debt created manually (not from a sale)
+            return this.telegram.notifyClientNewDebt(dto.clientId, {
+              date,
+              amount,
+              currency,
+              description: tx.description ?? undefined,
+              balanceUzs,
+              balanceUsd,
+            });
+          }
+        })
+        .catch((err) => this.logger.warn('Telegram notification failed', err));
+    }
+
+    return tx;
   }
 
   findAll(tenantId: string, clientId?: string) {

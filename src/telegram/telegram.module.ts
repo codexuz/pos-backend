@@ -4,13 +4,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TelegramService } from './telegram.service';
 import { TelegramUpdate } from './telegram.update';
 import { PrismaModule } from '../prisma/prisma.module';
-import { ReportsModule } from '../reports/reports.module';
-import { ProductsModule } from '../products/products.module';
-import { InventoryModule } from '../inventory/inventory.module';
-import { ClientsModule } from '../clients/clients.module';
-import { BranchesModule } from '../branches/branches.module';
-import { CategoriesModule } from '../categories/categories.module';
-import { TransactionsModule } from '../transactions/transactions.module';
 
 @Module({
   imports: [
@@ -38,14 +31,8 @@ import { TransactionsModule } from '../transactions/transactions.module';
       },
     }),
     PrismaModule,
-    ReportsModule,
-    ProductsModule,
-    InventoryModule,
-    ClientsModule,
-    BranchesModule,
-    CategoriesModule,
-    TransactionsModule,
   ],
   providers: [TelegramService, TelegramUpdate],
+  exports: [TelegramService],
 })
 export class TelegramModule {}

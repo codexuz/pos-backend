@@ -3,9 +3,11 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { TelegramService } from '../telegram/telegram.service';
 import { CreateSaleDto } from './dto';
 
 const SALE_INCLUDE = {
@@ -26,6 +28,7 @@ export class SalesService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    @Optional() private telegram: TelegramService,
   ) {}
 
   // ─── Create ──────────────────────────────────────────────────────────
@@ -174,12 +177,44 @@ export class SalesService {
       }
 
       return sale;
-    }).then((sale) => {
+    }).then(async (sale) => {
       // Fire low-stock notification after transaction commits
       const productIds = dto.items.map((i) => i.productId);
       this.checkAndNotifyLowStock(tenantId, productIds).catch((err) =>
         this.logger.error('Failed to send low-stock notification', err),
       );
+
+      // Notify client via Telegram if they have a linked account
+      if (this.telegram && dto.clientId) {
+        const date = this.telegram.fmtDate(sale.createdAt);
+        const total = Number(sale.totalAmount);
+        const paid = Number(sale.paidAmount);
+        const debt = Number(sale.debtAmount);
+        const currency = sale.currency as string;
+        const itemCount = (sale as any).items?.length ?? dto.items.length;
+
+        this.telegram
+          .notifyClientNewSale(dto.clientId, { date, total, paid, debt, currency, itemCount })
+          .catch((err) => this.logger.warn('Telegram notify new sale failed', err));
+
+        if (debt > 0) {
+          // Compute updated balance for the debt notification message
+          this.telegram
+            .getClientBalance(tenantId, dto.clientId)
+            .then(({ balanceUzs, balanceUsd }) =>
+              this.telegram.notifyClientNewDebt(dto.clientId!, {
+                date,
+                amount: debt,
+                currency,
+                description: `Debt from sale on ${date}`,
+                balanceUzs,
+                balanceUsd,
+              }),
+            )
+            .catch((err) => this.logger.warn('Telegram notify new debt failed', err));
+        }
+      }
+
       return sale;
     });
   }

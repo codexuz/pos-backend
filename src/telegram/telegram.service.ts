@@ -1,12 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectBot } from 'nestjs-telegraf';
+import { Telegraf } from 'telegraf';
 import { PrismaService } from '../prisma/prisma.service';
-import { ReportsService } from '../reports/reports.service';
-import { ProductsService } from '../products/products.service';
-import { InventoryService } from '../inventory/inventory.service';
-import { ClientsService } from '../clients/clients.service';
-import { BranchesService } from '../branches/branches.service';
-import { CategoriesService } from '../categories/categories.service';
-import { TransactionsService } from '../transactions/transactions.service';
 import { Lang } from './telegram.i18n';
 
 @Injectable()
@@ -14,19 +9,13 @@ export class TelegramService {
   private readonly logger = new Logger(TelegramService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private reportsService: ReportsService,
-    private productsService: ProductsService,
-    private inventoryService: InventoryService,
-    private clientsService: ClientsService,
-    private branchesService: BranchesService,
-    private categoriesService: CategoriesService,
-    private transactionsService: TransactionsService,
+    @InjectBot() private readonly bot: Telegraf,
+    private readonly prisma: PrismaService,
   ) {}
 
-  // ─── Auth & State ──────────────────────────────────────────────────
+  // ─── TelegramUser helpers ─────────────────────────────────────────
 
-  async findOrCreateTelegramUser(chatId: string) {
+  async findOrCreate(chatId: string) {
     return this.prisma.telegramUser.upsert({
       where: { chatId },
       update: {},
@@ -34,8 +23,11 @@ export class TelegramService {
     });
   }
 
-  async getTelegramUser(chatId: string) {
-    return this.prisma.telegramUser.findUnique({ where: { chatId } });
+  async getUser(chatId: string) {
+    return this.prisma.telegramUser.findUnique({
+      where: { chatId },
+      include: { client: true },
+    });
   }
 
   async setState(chatId: string, state: string, stateData?: any) {
@@ -46,277 +38,279 @@ export class TelegramService {
   }
 
   async getLanguage(chatId: string): Promise<Lang> {
-    const tgUser = await this.getTelegramUser(chatId);
-    return (tgUser?.language as Lang) ?? 'en';
+    const u = await this.prisma.telegramUser.findUnique({ where: { chatId }, select: { language: true } });
+    return (u?.language as Lang) ?? 'en';
   }
 
   async setLanguage(chatId: string, lang: Lang) {
+    await this.prisma.telegramUser.update({ where: { chatId }, data: { language: lang as any } });
+  }
+
+  async isLinked(chatId: string): Promise<boolean> {
+    const u = await this.prisma.telegramUser.findUnique({ where: { chatId }, select: { clientId: true } });
+    return !!u?.clientId;
+  }
+
+  /** Unlink a Telegram account from a client */
+  async unlink(chatId: string) {
     await this.prisma.telegramUser.update({
       where: { chatId },
-      data: { language: lang as any },
+      data: { clientId: null, tenantId: null, phone: null, state: 'idle', stateData: null },
     });
   }
 
-  async linkUserByPhone(chatId: string, phone: string) {
-    const digitsOnly = phone.replace(/[^0-9]/g, '');
-    const variants = [
-      phone.replace(/[^0-9+]/g, ''),
-      `+${digitsOnly}`,
-      digitsOnly,
-      digitsOnly.replace(/^998/, ''),
-    ];
+  // ─── Client linking via phone ──────────────────────────────────────
 
-    const user = await this.prisma.user.findFirst({
-      where: {
-        phone: { in: [...new Set(variants)] },
-        isActive: true,
-      },
-      include: { tenant: true },
+  /**
+   * Find a Client by phone number (searching across all tenants),
+   * then link this chatId to that client.
+   */
+  async linkClientByPhone(chatId: string, rawPhone: string) {
+    const digits = rawPhone.replace(/[^0-9]/g, '');
+    const variants = [
+      rawPhone.replace(/[^0-9+]/g, ''),
+      `+${digits}`,
+      digits,
+      digits.replace(/^998/, ''),
+      `+998${digits.slice(-9)}`,
+    ];
+    const unique = [...new Set(variants)];
+
+    const client = await this.prisma.client.findFirst({
+      where: { phone: { in: unique } },
+      include: { tenant: { select: { id: true, name: true } } },
     });
 
-    if (!user || !user.tenantId) return null;
+    if (!client) return null;
 
     await this.prisma.telegramUser.update({
       where: { chatId },
       data: {
-        userId: user.id,
-        tenantId: user.tenantId,
-        phone: user.phone,
+        clientId: client.id,
+        tenantId: client.tenantId,
+        phone: client.phone,
         state: 'idle',
         stateData: null,
       },
     });
 
-    return user;
+    return client;
   }
 
-  async isAuthenticated(chatId: string): Promise<boolean> {
-    const tgUser = await this.getTelegramUser(chatId);
-    return !!(tgUser?.userId && tgUser?.tenantId);
+  // ─── Client data queries ───────────────────────────────────────────
+
+  /**
+   * Current balance for the linked client.
+   * Positive = store owes client. Negative = client owes store.
+   */
+  async getClientBalance(tenantId: string, clientId: string) {
+    const client = await this.prisma.client.findFirst({
+      where: { id: clientId, tenantId },
+      select: { id: true, fullName: true, phone: true },
+    });
+
+    const txns = await this.prisma.clientTransaction.findMany({
+      where: { tenantId, clientId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    let balanceUzs = 0;
+    let balanceUsd = 0;
+
+    for (const tx of txns) {
+      const sign = tx.type === 'income' ? 1 : -1;
+      if ((tx.currency as string) === 'UZS') balanceUzs += sign * Number(tx.amount);
+      else balanceUsd += sign * Number(tx.amount);
+    }
+
+    return {
+      client,
+      balanceUzs: +balanceUzs.toFixed(0),
+      balanceUsd: +balanceUsd.toFixed(2),
+    };
   }
 
-  async getUserRole(chatId: string): Promise<string | null> {
-    const tgUser = await this.getTelegramUser(chatId);
-    if (!tgUser?.userId) return null;
-    const user = await this.prisma.user.findUnique({ where: { id: tgUser.userId }, select: { role: true } });
-    return user?.role ?? null;
-  }
-
-  async logout(chatId: string) {
-    await this.prisma.telegramUser.update({
-      where: { chatId },
-      data: { userId: null, tenantId: null, phone: null, state: 'idle', stateData: null },
+  /** Recent ClientTransactions for the linked client */
+  async getClientTransactions(tenantId: string, clientId: string, limit = 15) {
+    return this.prisma.clientTransaction.findMany({
+      where: { tenantId, clientId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
     });
   }
 
-  // ─── Dashboard / Reports ──────────────────────────────────────────
-
-  async getDashboard(tenantId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const from = today.toISOString();
-
-    const [financialSummary, inventoryReport] = await Promise.all([
-      this.reportsService.financialSummary(tenantId, undefined, from),
-      this.reportsService.inventoryReport(tenantId),
-    ]);
-
-    return { financialSummary, inventoryReport };
+  /** Recent Sales for the linked client */
+  async getClientSales(tenantId: string, clientId: string, limit = 10) {
+    return this.prisma.sale.findMany({
+      where: { tenantId, clientId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: { items: { include: { product: { select: { name: true } } } } },
+    });
   }
 
-  async getFinancialSummary(tenantId: string, from?: string, to?: string) {
-    return this.reportsService.financialSummary(tenantId, undefined, from, to);
+  // ─── Push Notifications ────────────────────────────────────────────
+
+  /**
+   * Send a Telegram message to the client with the given clientId.
+   * Silently fails if the client has no linked Telegram account.
+   */
+  async notifyClient(clientId: string, message: string): Promise<void> {
+    try {
+      const tgUsers = await this.prisma.telegramUser.findMany({
+        where: { clientId },
+        select: { chatId: true },
+      });
+
+      for (const { chatId } of tgUsers) {
+        try {
+          await this.bot.telegram.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        } catch (err) {
+          this.logger.warn(`Failed to notify client ${clientId} at chatId ${chatId}: ${err}`);
+        }
+      }
+    } catch (err) {
+      this.logger.error(`notifyClient error for ${clientId}:`, err);
+    }
   }
 
-  async getTopProducts(tenantId: string, limit = 10) {
-    return this.reportsService.topProducts(tenantId, undefined, limit);
-  }
-
-  // ─── Products (CRUD) ─────────────────────────────────────────────
-
-  async getProducts(tenantId: string, search?: string) {
-    return this.productsService.findAll(tenantId, search);
-  }
-
-  async getProduct(tenantId: string, productId: string) {
-    return this.productsService.findOne(productId, tenantId);
-  }
-
-  async createProduct(tenantId: string, data: { name: string; sellingPrice: number; costPrice?: number; categoryId?: string }) {
-    return this.productsService.create(tenantId, {
-      name: data.name,
-      sellingPrice: data.sellingPrice,
-      costPrice: data.costPrice,
-      categoryId: data.categoryId,
-    } as any);
-  }
-
-  async updateProduct(tenantId: string, productId: string, data: Record<string, any>) {
-    return this.productsService.update(productId, tenantId, data as any);
-  }
-
-  async deleteProduct(tenantId: string, productId: string) {
-    return this.productsService.remove(productId, tenantId);
-  }
-
-  // ─── Clients (CRUD) ──────────────────────────────────────────────
-
-  async getClients(tenantId: string, search?: string) {
-    return this.clientsService.findAll(tenantId, search);
-  }
-
-  async getClient(tenantId: string, clientId: string) {
-    return this.clientsService.findOne(tenantId, clientId);
-  }
-
-  async createClient(tenantId: string, data: { fullName: string; phone?: string; address?: string; notes?: string }) {
-    return this.clientsService.create(tenantId, data as any);
-  }
-
-  async updateClient(tenantId: string, clientId: string, data: Record<string, any>) {
-    return this.clientsService.update(tenantId, clientId, data as any);
-  }
-
-  async deleteClient(tenantId: string, clientId: string) {
-    return this.clientsService.remove(tenantId, clientId);
-  }
-
-  // ─── Branches (CRUD) ─────────────────────────────────────────────
-
-  async getBranches(tenantId: string) {
-    return this.branchesService.findAll(tenantId);
-  }
-
-  async getBranch(tenantId: string, branchId: string) {
-    return this.branchesService.findOne(branchId, tenantId);
-  }
-
-  async createBranch(tenantId: string, data: { name: string; address?: string; phone?: string }) {
-    return this.branchesService.create(tenantId, data as any);
-  }
-
-  async updateBranch(tenantId: string, branchId: string, data: Record<string, any>) {
-    return this.branchesService.update(branchId, tenantId, data as any);
-  }
-
-  async deleteBranch(tenantId: string, branchId: string) {
-    return this.branchesService.remove(branchId, tenantId);
-  }
-
-  // ─── Categories (CRUD) ───────────────────────────────────────────
-
-  async getCategories(tenantId: string) {
-    return this.categoriesService.findAll(tenantId);
-  }
-
-  async getCategory(tenantId: string, categoryId: string) {
-    return this.categoriesService.findOne(categoryId, tenantId);
-  }
-
-  async createCategory(tenantId: string, data: { name: string; description?: string }) {
-    return this.categoriesService.create(tenantId, data as any);
-  }
-
-  async updateCategory(tenantId: string, categoryId: string, data: Record<string, any>) {
-    return this.categoriesService.update(categoryId, tenantId, data as any);
-  }
-
-  async deleteCategory(tenantId: string, categoryId: string) {
-    return this.categoriesService.remove(categoryId, tenantId);
-  }
-
-  // ─── Inventory (CRUD) ────────────────────────────────────────────
-
-  async getInventory(tenantId: string) {
-    return this.inventoryService.findAll(tenantId);
-  }
-
-  async getInventoryItem(id: string) {
-    return this.inventoryService.findOne(id);
-  }
-
-  async getLowStock(tenantId: string) {
-    return this.inventoryService.findLowStock(tenantId) as Promise<any[]>;
-  }
-
-  async createInventory(tenantId: string, data: { productId: string; quantity: number; minQuantity?: number }) {
-    return this.inventoryService.create(tenantId, data as any);
-  }
-
-  async updateInventory(id: string, tenantId: string, userId: string, data: { quantity?: number; minQuantity?: number }) {
-    return this.inventoryService.adjust(id, tenantId, userId, data as any);
-  }
-
-  async deleteInventory(id: string) {
-    return this.inventoryService.remove(id);
-  }
-
-  // ─── Transactions (CRUD) ─────────────────────────────────────────
-
-  async getTransactions(tenantId: string, type?: string) {
-    return this.transactionsService.findAll(tenantId, undefined, type);
-  }
-
-  async getTransaction(tenantId: string, transactionId: string) {
-    return this.transactionsService.findOne(transactionId, tenantId);
-  }
-
-  async createTransaction(tenantId: string, userId: string, data: { branchId: string; type: string; amount: number; description?: string }) {
-    return this.transactionsService.create(tenantId, userId, data as any);
-  }
-
-  async updateTransaction(tenantId: string, transactionId: string, data: Record<string, any>) {
-    return this.transactionsService.update(transactionId, tenantId, data as any);
-  }
-
-  async deleteTransaction(tenantId: string, transactionId: string) {
-    return this.transactionsService.remove(transactionId, tenantId);
-  }
-
-  // ─── Compatibility shims (telegram.update.ts still uses these names) ─
-
-  /** Alias → financialSummary */
-  async getSalesSummary(tenantId: string, from?: string, to?: string) {
-    return this.reportsService.financialSummary(tenantId, undefined, from, to);
-  }
-
-  /** Replaces old debtsService.summary — returns client outcome balance totals */
-  async getDebtSummary(tenantId: string) {
-    const balances = await this.reportsService.clientBalances(tenantId);
-    const totalDebt = balances.reduce((s, b) => s + (b.balanceUzs < 0 ? Math.abs(b.balanceUzs) : 0), 0);
-    return { totalDebt: +totalDebt.toFixed(2), clientCount: balances.length };
-  }
-
-  /** Replaces old debtsService.clientBalances */
-  async getClientBalances(tenantId: string) {
-    return this.reportsService.clientBalances(tenantId);
-  }
-
-  /** Replaces old salesService.findAll — returns recent transactions instead */
-  async getRecentSales(tenantId: string, limit = 10) {
-    return this.transactionsService.findAll(tenantId, undefined, undefined);
-  }
-
-  /** Replaces old salesService.create — creates a client income transaction */
-  async createSale(
-    tenantId: string,
-    branchId: string,
-    userId: string,
+  /**
+   * Notify a client that a new sale with debt was created for them.
+   */
+  async notifyClientNewDebt(
+    clientId: string,
     data: {
-      items?: { productId: string; quantity: number; unitPrice: number }[];
-      clientId?: string;
-      paidAmount?: number;
-      notes?: string;
+      date: string;
+      amount: number;
+      currency: string;
+      description?: string;
+      balanceUzs: number;
+      balanceUsd: number;
     },
-  ) {
-    const total = data.paidAmount ??
-      (data.items?.reduce((s, i) => s + i.quantity * i.unitPrice, 0) ?? 0);
+    lang: Lang = 'en',
+  ): Promise<void> {
+    const { i18n } = await import('./telegram.i18n');
+    const msg = i18n('notify_new_debt', lang, {
+      date: data.date,
+      amount: this.fmt(data.amount),
+      currency: data.currency,
+      description: data.description ?? '—',
+      balanceUzs: this.fmt(Math.abs(data.balanceUzs)),
+      balanceUsd: this.fmtUsd(Math.abs(data.balanceUsd)),
+    });
+    await this.notifyClient(clientId, msg);
+  }
 
-    return this.transactionsService.create(tenantId, userId, {
-      branchId,
-      type: 'income',
-      amount: total,
-      description: data.notes ?? 'POS transaction',
-    } as any);
+  /**
+   * Notify a client that a payment was recorded for them.
+   */
+  async notifyClientPaymentReceived(
+    clientId: string,
+    data: {
+      date: string;
+      amount: number;
+      currency: string;
+      balanceUzs: number;
+      balanceUsd: number;
+    },
+    lang: Lang = 'en',
+  ): Promise<void> {
+    const { i18n } = await import('./telegram.i18n');
+    const msg = i18n('notify_payment_received', lang, {
+      date: data.date,
+      amount: this.fmt(data.amount),
+      currency: data.currency,
+      balanceUzs: this.fmt(Math.abs(data.balanceUzs)),
+      balanceUsd: this.fmtUsd(Math.abs(data.balanceUsd)),
+    });
+    await this.notifyClient(clientId, msg);
+  }
+
+  /**
+   * Notify a client about a new sale/order (with or without debt).
+   */
+  async notifyClientNewSale(
+    clientId: string,
+    data: {
+      date: string;
+      total: number;
+      paid: number;
+      debt: number;
+      currency: string;
+      itemCount: number;
+    },
+    lang: Lang = 'en',
+  ): Promise<void> {
+    const { i18n } = await import('./telegram.i18n');
+    const debtLine =
+      data.debt > 0
+        ? i18n('debt_line_uzs', lang, { amount: this.fmt(data.debt) })
+        : '';
+
+    const msg = i18n('notify_new_sale', lang, {
+      date: data.date,
+      total: this.fmt(data.total),
+      currency: data.currency,
+      paid: this.fmt(data.paid),
+      debtLine,
+      items: String(data.itemCount),
+    });
+    await this.notifyClient(clientId, msg);
+  }
+
+  /**
+   * Send a debt reminder to a specific client.
+   */
+  async sendDebtReminderToClient(
+    clientId: string,
+    tenantId: string,
+    lang: Lang = 'en',
+  ): Promise<boolean> {
+    const { balanceUzs, balanceUsd, client } = await this.getClientBalance(tenantId, clientId);
+    if (!client) return false;
+    if (balanceUzs >= 0 && balanceUsd >= 0) return false; // no debt
+
+    const { i18n } = await import('./telegram.i18n');
+    const msg = i18n('notify_debt_reminder', lang, {
+      name: client.fullName,
+      balanceUzs: this.fmt(Math.abs(Math.min(0, balanceUzs))),
+      balanceUsd: this.fmtUsd(Math.abs(Math.min(0, balanceUsd))),
+    });
+    await this.notifyClient(clientId, msg);
+    return true;
+  }
+
+  /**
+   * Send debt reminders to ALL clients with linked Telegram accounts
+   * who have a negative balance for the given tenant.
+   */
+  async sendDebtRemindersToAllClients(tenantId: string): Promise<number> {
+    const linkedClients = await this.prisma.telegramUser.findMany({
+      where: { tenantId, clientId: { not: null } },
+      select: { clientId: true, language: true },
+    });
+
+    let notified = 0;
+    for (const { clientId, language } of linkedClients) {
+      if (!clientId) continue;
+      const lang = (language as Lang) ?? 'en';
+      const sent = await this.sendDebtReminderToClient(clientId, tenantId, lang);
+      if (sent) notified++;
+    }
+    return notified;
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────
+
+  fmt(n: number): string {
+    return Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  fmtUsd(n: number): string {
+    return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  fmtDate(d: Date | string): string {
+    return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 }
