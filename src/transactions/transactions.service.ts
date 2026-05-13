@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto, UpdateTransactionDto } from './dto';
+import { paginateParams, paginated } from '../common/helpers/paginate';
 
 const INCLUDE = {
   expenseCategory: true,
@@ -30,16 +31,18 @@ export class TransactionsService {
     });
   }
 
-  findAll(tenantId: string, branchId?: string, type?: string) {
-    return this.prisma.transaction.findMany({
-      where: {
-        tenantId,
-        ...(branchId && { branchId }),
-        ...(type && { type: type as any }),
-      },
-      include: INCLUDE,
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(tenantId: string, branchId?: string, type?: string, page = 1, limit = 20) {
+    const { skip, take, page: p, limit: l } = paginateParams(page, limit);
+    const where = {
+      tenantId,
+      ...(branchId && { branchId }),
+      ...(type && { type: type as any }),
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.transaction.findMany({ where, include: INCLUDE, orderBy: { createdAt: 'desc' }, skip, take }),
+      this.prisma.transaction.count({ where }),
+    ]);
+    return paginated(data, total, p, l);
   }
 
   async findOne(id: string, tenantId: string) {

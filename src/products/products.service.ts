@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
 import { CreateProductDto, UpdateProductDto } from './dto';
+import { paginateParams, paginated } from '../common/helpers/paginate';
 
 @Injectable()
 export class ProductsService {
@@ -55,29 +56,38 @@ export class ProductsService {
     });
   }
 
-  findAll(tenantId: string, search?: string, categoryId?: string, brandCategoryId?: string) {
-    return this.prisma.product.findMany({
-      where: {
-        tenantId,
-        isActive: true,
-        ...(categoryId && { categoryId }),
-        ...(brandCategoryId && { brandCategoryId }),
-        ...(search && {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { description: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }),
-      },
-      include: { category: true, brandCategory: true, unit: true, inventory: true },
-      orderBy: { createdAt: 'desc' },
-    }).then(products => Promise.all(products.map(async product => {
+  async findAll(tenantId: string, search?: string, categoryId?: string, brandCategoryId?: string, page = 1, limit = 20) {
+    const { skip, take, page: p, limit: l } = paginateParams(page, limit);
+    const where = {
+      tenantId,
+      isActive: true,
+      ...(categoryId && { categoryId }),
+      ...(brandCategoryId && { brandCategoryId }),
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { description: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }),
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        include: { category: true, brandCategory: true, unit: true, inventory: true },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+    const data = await Promise.all(rows.map(async product => {
       const inventory = product.inventory && product.inventory.length > 0 ? product.inventory[0] : null;
       return this.resolveImageUrl({
         ...product,
         inventoryStatus: inventory && inventory.quantity <= (inventory.minQuantity || 0) ? 'low-stock' : 'in-stock',
       });
-    })));
+    }));
+    return paginated(data, total, p, l);
   }
 
   async findOne(id: string, tenantId: string) {

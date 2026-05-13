@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateIncomeCategoryDto, UpdateIncomeCategoryDto } from './dto';
+import { paginateParams, paginated } from '../common/helpers/paginate';
 
 @Injectable()
 export class IncomeCategoriesService {
@@ -12,11 +13,14 @@ export class IncomeCategoriesService {
     });
   }
 
-  findAll(tenantId: string) {
-    return this.prisma.incomeCategory.findMany({
-      where: { tenantId },
-      orderBy: { name: 'asc' },
-    });
+  async findAll(tenantId: string, page = 1, limit = 20) {
+    const { skip, take, page: p, limit: l } = paginateParams(page, limit);
+    const where = { tenantId };
+    const [data, total] = await Promise.all([
+      this.prisma.incomeCategory.findMany({ where, orderBy: { name: 'asc' }, skip, take }),
+      this.prisma.incomeCategory.count({ where }),
+    ]);
+    return paginated(data, total, p, l);
   }
 
   async findOne(tenantId: string, id: string) {

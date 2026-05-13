@@ -43,6 +43,8 @@ export class SalesController {
   @ApiQuery({ name: 'status', required: false, enum: ['completed', 'debt', 'cancelled'] })
   @ApiQuery({ name: 'from', required: false, description: 'ISO date string' })
   @ApiQuery({ name: 'to', required: false, description: 'ISO date string' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   findAll(
     @CurrentUser('tenantId') tenantId: string,
     @Query('clientId') clientId?: string,
@@ -50,8 +52,10 @@ export class SalesController {
     @Query('status') status?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
   ) {
-    return this.service.findAll(tenantId, { clientId, branchId, status, from, to });
+    return this.service.findAll(tenantId, { clientId, branchId, status, from, to, page: +page, limit: +limit });
   }
 
   @Get('summary')

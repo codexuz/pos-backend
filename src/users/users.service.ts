@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SseService } from '../auth/sse.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import * as bcrypt from 'bcrypt';
+import { paginateParams, paginated } from '../common/helpers/paginate';
 
 @Injectable()
 export class UsersService {
@@ -37,16 +38,24 @@ export class UsersService {
     });
   }
 
-  findAll(tenantId: string, role?: string) {
-    return this.prisma.user.findMany({
-      where: { tenantId, ...(role && { role: role as any }) },
-      select: {
-        id: true, phone: true, fullName: true, role: true,
-        branchId: true, language: true, isActive: true, createdAt: true,
-        branch: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(tenantId: string, role?: string, page = 1, limit = 20) {
+    const { skip, take, page: p, limit: l } = paginateParams(page, limit);
+    const where = { tenantId, ...(role && { role: role as any }) };
+    const [data, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true, phone: true, fullName: true, role: true,
+          branchId: true, language: true, isActive: true, createdAt: true,
+          branch: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return paginated(data, total, p, l);
   }
 
   async findOne(id: string, tenantId: string) {

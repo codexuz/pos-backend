@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { CreateSaleDto } from './dto';
+import { paginateParams, paginated } from '../common/helpers/paginate';
 
 const SALE_INCLUDE = {
   items: {
@@ -221,7 +222,7 @@ export class SalesService {
 
   // ─── Read ─────────────────────────────────────────────────────────────
 
-  findAll(
+  async findAll(
     tenantId: string,
     filters: {
       clientId?: string;
@@ -229,24 +230,28 @@ export class SalesService {
       status?: string;
       from?: string;
       to?: string;
+      page?: number;
+      limit?: number;
     } = {},
   ) {
-    return this.prisma.sale.findMany({
-      where: {
-        tenantId,
-        ...(filters.clientId && { clientId: filters.clientId }),
-        ...(filters.branchId && { branchId: filters.branchId }),
-        ...(filters.status && { status: filters.status as any }),
-        ...((filters.from || filters.to) && {
-          createdAt: {
-            ...(filters.from && { gte: new Date(filters.from) }),
-            ...(filters.to && { lte: new Date(filters.to) }),
-          },
-        }),
-      },
-      include: SALE_INCLUDE,
-      orderBy: { createdAt: 'desc' },
-    });
+    const { skip, take, page: p, limit: l } = paginateParams(filters.page ?? 1, filters.limit ?? 20);
+    const where = {
+      tenantId,
+      ...(filters.clientId && { clientId: filters.clientId }),
+      ...(filters.branchId && { branchId: filters.branchId }),
+      ...(filters.status && { status: filters.status as any }),
+      ...((filters.from || filters.to) && {
+        createdAt: {
+          ...(filters.from && { gte: new Date(filters.from) }),
+          ...(filters.to && { lte: new Date(filters.to) }),
+        },
+      }),
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.sale.findMany({ where, include: SALE_INCLUDE, orderBy: { createdAt: 'desc' }, skip, take }),
+      this.prisma.sale.count({ where }),
+    ]);
+    return paginated(data, total, p, l);
   }
 
   async findOne(id: string, tenantId: string) {

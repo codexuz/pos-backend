@@ -23,11 +23,15 @@ export class SupplierTransactionsController {
   @Get()
   @ApiOperation({ summary: 'List supplier transactions' })
   @ApiQuery({ name: 'supplierId', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   findAll(
     @CurrentUser('tenantId') tenantId: string,
     @Query('supplierId') supplierId?: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
   ) {
-    return this.service.findAll(tenantId, supplierId);
+    return this.service.findAll(tenantId, supplierId, +page, +limit);
   }
 
   @Get('balance/:supplierId')

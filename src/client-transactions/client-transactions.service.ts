@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { CreateClientTransactionDto } from './dto';
+import { paginateParams, paginated } from '../common/helpers/paginate';
 
 @Injectable()
 export class ClientTransactionsService {
@@ -64,18 +65,26 @@ export class ClientTransactionsService {
     return tx;
   }
 
-  findAll(tenantId: string, clientId?: string) {
-    return this.prisma.clientTransaction.findMany({
-      where: {
-        tenantId,
-        ...(clientId && { clientId }),
-      },
-      include: {
-        client: { select: { id: true, fullName: true, phone: true } },
-        user: { select: { id: true, fullName: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(tenantId: string, clientId?: string, page = 1, limit = 20) {
+    const { skip, take, page: p, limit: l } = paginateParams(page, limit);
+    const where = {
+      tenantId,
+      ...(clientId && { clientId }),
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.clientTransaction.findMany({
+        where,
+        include: {
+          client: { select: { id: true, fullName: true, phone: true } },
+          user: { select: { id: true, fullName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.clientTransaction.count({ where }),
+    ]);
+    return paginated(data, total, p, l);
   }
 
   async findOne(tenantId: string, id: string) {

@@ -19,8 +19,15 @@ export class SuppliersController {
   @Get()
   @ApiOperation({ summary: 'List suppliers' })
   @ApiQuery({ name: 'search', required: false })
-  findAll(@CurrentUser('tenantId') tenantId: string, @Query('search') search?: string) {
-    return this.service.findAll(tenantId, search);
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  findAll(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('search') search?: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+  ) {
+    return this.service.findAll(tenantId, search, +page, +limit);
   }
 
   @Get('export/excel')

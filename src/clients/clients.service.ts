@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
 import { CreateClientDto, UpdateClientDto } from './dto';
+import { paginateParams, paginated } from '../common/helpers/paginate';
 
 @Injectable()
 export class ClientsService {
@@ -21,42 +22,86 @@ export class ClientsService {
     search?: string,
     sortBy?: 'createdAt' | 'clientTransAmount' | 'alphabetic',
     order?: 'asc' | 'desc',
+    page = 1,
+    limit = 20,
   ) {
     const sortField = sortBy || 'createdAt';
     const sortOrder = order || 'desc';
+    const { skip, take, page: p, limit: l } = paginateParams(page, limit);
 
-    const clients = await this.prisma.client.findMany({
-      where: {
-        tenantId,
-        ...(search && {
-          OR: [
-            { fullName: { contains: search, mode: 'insensitive' as const } },
-            { phone: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }),
-      },
-      include: {
-        clientTransactions: {
-          select: { amount: true, currency: true },
+    const where = {
+      tenantId,
+      ...(search && {
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' as const } },
+          { phone: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }),
+    };
+
+    if (sortField === 'clientTransAmount') {
+      // Fetch ALL matching records for in-memory sort, then slice manually
+      const clients = await this.prisma.client.findMany({
+        where,
+        include: {
+          clientTransactions: {
+            select: { amount: true, currency: true },
+          },
         },
-      },
-      ...(sortField === 'createdAt' && {
-        orderBy: { createdAt: sortOrder },
-      }),
-      ...(sortField === 'alphabetic' && {
-        orderBy: { fullName: sortOrder },
-      }),
-    });
+      });
 
-    const result = clients.map(({ clientTransactions, ...client }) => {
+      const result = clients.map(({ clientTransactions, ...client }) => {
+        let totalAmountUzs = 0;
+        let totalAmountUsd = 0;
+        for (const tx of clientTransactions) {
+          if (tx.currency === 'UZS') totalAmountUzs += Number(tx.amount);
+          else totalAmountUsd += Number(tx.amount);
+        }
+        return {
+          ...client,
+          totalAmountUzs: +totalAmountUzs.toFixed(2),
+          totalAmountUsd: +totalAmountUsd.toFixed(6),
+        };
+      });
+
+      result.sort((a, b) => {
+        const totalA = a.totalAmountUzs + a.totalAmountUsd;
+        const totalB = b.totalAmountUzs + b.totalAmountUsd;
+        return sortOrder === 'asc' ? totalA - totalB : totalB - totalA;
+      });
+
+      const total = result.length;
+      const sliced = result.slice(skip, skip + take);
+      return paginated(sliced, total, p, l);
+    }
+
+    const [clients, total] = await Promise.all([
+      this.prisma.client.findMany({
+        where,
+        include: {
+          clientTransactions: {
+            select: { amount: true, currency: true },
+          },
+        },
+        ...(sortField === 'createdAt' && {
+          orderBy: { createdAt: sortOrder },
+        }),
+        ...(sortField === 'alphabetic' && {
+          orderBy: { fullName: sortOrder },
+        }),
+        skip,
+        take,
+      }),
+      this.prisma.client.count({ where }),
+    ]);
+
+    const data = clients.map(({ clientTransactions, ...client }) => {
       let totalAmountUzs = 0;
       let totalAmountUsd = 0;
-
       for (const tx of clientTransactions) {
         if (tx.currency === 'UZS') totalAmountUzs += Number(tx.amount);
         else totalAmountUsd += Number(tx.amount);
       }
-
       return {
         ...client,
         totalAmountUzs: +totalAmountUzs.toFixed(2),
@@ -64,15 +109,7 @@ export class ClientsService {
       };
     });
 
-    if (sortField === 'clientTransAmount') {
-      result.sort((a, b) => {
-        const totalA = a.totalAmountUzs + a.totalAmountUsd;
-        const totalB = b.totalAmountUzs + b.totalAmountUsd;
-        return sortOrder === 'asc' ? totalA - totalB : totalB - totalA;
-      });
-    }
-
-    return result;
+    return paginated(data, total, p, l);
   }
 
   async findOne(tenantId: string, id: string) {

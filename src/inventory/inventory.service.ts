@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateInventoryDto, UpdateInventoryDto } from './dto';
+import { paginateParams, paginated } from '../common/helpers/paginate';
 
 @Injectable()
 export class InventoryService {
@@ -22,17 +23,25 @@ export class InventoryService {
     });
   }
 
-  findAll(tenantId: string) {
-    return this.prisma.inventory.findMany({
-      where: { tenantId },
-      include: {
-        product: {
-          select: { id: true, name: true, sellingPrice: true, currency: true, unit: true },
+  async findAll(tenantId: string, page = 1, limit = 20) {
+    const { skip, take, page: p, limit: l } = paginateParams(page, limit);
+    const where = { tenantId };
+    const [data, total] = await Promise.all([
+      this.prisma.inventory.findMany({
+        where,
+        include: {
+          product: {
+            select: { id: true, name: true, sellingPrice: true, currency: true, unit: true },
+          },
+          supplier: { select: { id: true, name: true } },
         },
-        supplier: { select: { id: true, name: true } },
-      },
-      orderBy: { product: { name: 'asc' } },
-    });
+        orderBy: { product: { name: 'asc' } },
+        skip,
+        take,
+      }),
+      this.prisma.inventory.count({ where }),
+    ]);
+    return paginated(data, total, p, l);
   }
 
   findLowStock(tenantId: string) {

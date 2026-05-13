@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
 import { CreateSupplierDto, UpdateSupplierDto } from './dto';
+import { paginateParams, paginated } from '../common/helpers/paginate';
 
 @Injectable()
 export class SuppliersService {
@@ -16,20 +17,23 @@ export class SuppliersService {
     });
   }
 
-  findAll(tenantId: string, search?: string) {
-    return this.prisma.supplier.findMany({
-      where: {
-        tenantId,
-        isActive: true,
-        ...(search && {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { phone: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }),
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(tenantId: string, search?: string, page = 1, limit = 20) {
+    const { skip, take, page: p, limit: l } = paginateParams(page, limit);
+    const where = {
+      tenantId,
+      isActive: true,
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { phone: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }),
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.supplier.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take }),
+      this.prisma.supplier.count({ where }),
+    ]);
+    return paginated(data, total, p, l);
   }
 
   async findOne(tenantId: string, id: string) {

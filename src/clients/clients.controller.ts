@@ -21,13 +21,17 @@ export class ClientsController {
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'sortBy', required: false, enum: ['createdAt', 'clientTransAmount', 'alphabetic'] })
   @ApiQuery({ name: 'order', required: false, enum: ['asc', 'desc'] })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   findAll(
     @CurrentUser('tenantId') tenantId: string,
     @Query('search') search?: string,
     @Query('sortBy') sortBy?: 'createdAt' | 'clientTransAmount' | 'alphabetic',
     @Query('order') order?: 'asc' | 'desc',
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
   ) {
-    return this.service.findAll(tenantId, search, sortBy, order);
+    return this.service.findAll(tenantId, search, sortBy, order, +page, +limit);
   }
 
   @Get('export/excel')

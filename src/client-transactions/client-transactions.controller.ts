@@ -23,11 +23,15 @@ export class ClientTransactionsController {
   @Get()
   @ApiOperation({ summary: 'List client transactions' })
   @ApiQuery({ name: 'clientId', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   findAll(
     @CurrentUser('tenantId') tenantId: string,
     @Query('clientId') clientId?: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
   ) {
-    return this.service.findAll(tenantId, clientId);
+    return this.service.findAll(tenantId, clientId, +page, +limit);
   }
 
   @Get('balance/:clientId')

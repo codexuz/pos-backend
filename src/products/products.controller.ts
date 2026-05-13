@@ -35,13 +35,17 @@ export class ProductsController {
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'categoryId', required: false })
   @ApiQuery({ name: 'brandCategoryId', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   findAll(
     @CurrentUser('tenantId') tenantId: string,
     @Query('search') search?: string,
     @Query('categoryId') categoryId?: string,
     @Query('brandCategoryId') brandCategoryId?: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
   ) {
-    return this.service.findAll(tenantId, search, categoryId, brandCategoryId);
+    return this.service.findAll(tenantId, search, categoryId, brandCategoryId, +page, +limit);
   }
 
   @Get(':id')

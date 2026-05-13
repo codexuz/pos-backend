@@ -31,11 +31,15 @@ export class UsersController {
   @Roles('owner', 'super_admin')
   @ApiOperation({ summary: 'List all users' })
   @ApiQuery({ name: 'role', required: false, enum: ['owner', 'seller', 'super_admin'] })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   findAll(
     @CurrentUser('tenantId') tenantId: string,
     @Query('role') role?: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
   ) {
-    return this.service.findAll(tenantId, role);
+    return this.service.findAll(tenantId, role, +page, +limit);
   }
 
   @Get(':id')
