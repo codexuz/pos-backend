@@ -190,8 +190,9 @@ export class ClientsService {
     const buffer = Buffer.from(tsvContent, 'utf-8');
     const fileName = `clients-${Date.now()}.xls`;
     const objectKey = await this.minioService.uploadReport(buffer, fileName, 'application/vnd.ms-excel');
+    console.log('object:', objectKey)
     const url = await this.minioService.getFileUrl(objectKey);
-
+    console.log('url:', url)
     return { url, fileName };
   }
 }
