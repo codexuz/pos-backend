@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
 import { CreateClientDto, UpdateClientDto } from './dto';
@@ -150,7 +150,29 @@ export class ClientsService {
   }
 
   async remove(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
+    const client = await this.prisma.client.findFirst({
+      where: { id, tenantId },
+      include: {
+        clientTransactions: {
+          select: { amount: true, type: true, currency: true },
+        },
+      },
+    });
+    if (!client) throw new NotFoundException('Client not found');
+
+    let balanceUzs = 0;
+    let balanceUsd = 0;
+
+    for (const tx of client.clientTransactions) {
+      const sign = tx.type === 'income' ? 1 : -1;
+      if (tx.currency === 'UZS') balanceUzs += sign * Number(tx.amount);
+      else balanceUsd += sign * Number(tx.amount);
+    }
+
+    if (balanceUzs < 0 || balanceUsd < 0) {
+      throw new BadRequestException('Cannot delete client with outstanding debt');
+    }
+
     return this.prisma.client.delete({ where: { id } });
   }
 

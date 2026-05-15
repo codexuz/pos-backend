@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
 import { CreateSupplierDto, UpdateSupplierDto } from './dto';
@@ -53,7 +53,29 @@ export class SuppliersService {
   }
 
   async remove(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
+    const supplier = await this.prisma.supplier.findFirst({
+      where: { id, tenantId },
+      include: {
+        supplierTransactions: {
+          select: { amount: true, type: true, currency: true },
+        },
+      },
+    });
+    if (!supplier) throw new NotFoundException('Supplier not found');
+
+    let balanceUzs = 0;
+    let balanceUsd = 0;
+
+    for (const tx of supplier.supplierTransactions) {
+      const sign = tx.type === 'income' ? 1 : -1;
+      if (tx.currency === 'UZS') balanceUzs += sign * Number(tx.amount);
+      else balanceUsd += sign * Number(tx.amount);
+    }
+
+    if (balanceUzs < 0 || balanceUsd < 0) {
+      throw new BadRequestException('Cannot delete supplier with outstanding debt');
+    }
+
     return this.prisma.supplier.delete({ where: { id } });
   }
 
