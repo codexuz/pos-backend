@@ -14,7 +14,7 @@ export class UsersController {
   @Roles('owner', 'seller', 'super_admin')
   @ApiOperation({ summary: 'Change current user language' })
   changeLanguage(
-    @CurrentUser('sub') userId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: ChangeLanguageDto,
   ) {
     return this.service.changeLanguage(userId, dto.language);

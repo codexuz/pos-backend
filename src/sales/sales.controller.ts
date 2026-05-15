@@ -30,7 +30,7 @@ export class SalesController {
   })
   create(
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('id') userId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: CreateSaleDto,
   ) {
     return this.service.create(tenantId, userId, dto);
@@ -84,7 +84,7 @@ export class SalesController {
   cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('id') userId: string,
+    @CurrentUser('userId') userId: string,
   ) {
     return this.service.cancel(id, tenantId, userId);
   }

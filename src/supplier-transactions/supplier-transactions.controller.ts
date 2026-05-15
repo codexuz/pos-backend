@@ -14,7 +14,7 @@ export class SupplierTransactionsController {
   @ApiOperation({ summary: 'Record a supplier income or outcome (debt) transaction' })
   create(
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('id') userId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: CreateSupplierTransactionDto,
   ) {
     return this.service.create(tenantId, userId, dto);

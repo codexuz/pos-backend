@@ -55,7 +55,7 @@ export class InventoryController {
   adjust(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('id') userId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: UpdateInventoryDto,
   ) {
     return this.service.adjust(id, tenantId, userId, dto);

@@ -14,7 +14,7 @@ export class ClientTransactionsController {
   @ApiOperation({ summary: 'Record a client income or outcome (debt) transaction' })
   create(
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('id') userId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: CreateClientTransactionDto,
   ) {
     return this.service.create(tenantId, userId, dto);
