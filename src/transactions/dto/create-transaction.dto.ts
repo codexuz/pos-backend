@@ -29,6 +29,11 @@ export class CreateTransactionDto {
   @IsUUID()
   expenseCategoryId?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  incomeCategoryId?: string;
+
   @ApiPropertyOptional({ example: 'Monthly rent payment' })
   @IsOptional()
   @IsString()
